@@ -1,8 +1,11 @@
 var LocalStrategy = require('passport-local').Strategy;
+var FacebookTokenStrategy = require('passport-facebook-token');
 var bcrypt = require('bcrypt');
 var async = require('async');
+var authConfig = require('./authconfig');
 
 var passportconfig = function(passport){
+
     passport.serializeUser(function(customer, done) {
         done(null, customer.id);
     });
@@ -12,10 +15,10 @@ var passportconfig = function(passport){
             if (err) {
                 done(err);
             } else {
-                var sql = "SELECT id, customer_name " +
+                var select = "SELECT id, customer_name " +
                           "FROM diner.customer " +
                           "WHERE email = ?";
-                connection.query(sql, [id], function(err, results) {
+                connection.query(select, [id], function(err, results) {
                     if (err) {
                         done(err);
                         connection.release();
@@ -97,6 +100,92 @@ var passportconfig = function(passport){
                 done(customer);
             }
         });
+    }));
+
+    passport.use('facebook-token', new FacebookTokenStrategy({
+        "clientID": authConfig.facebook.appId,
+        "clientSecret": authConfig.facebook.appSecret
+    }, function (accessToken, refreshToken, profile, done) {
+
+        function getConnection(callback) {
+            pool.getConnection(function(err, connection) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, connection);
+                }
+            });
+        }
+
+        function selectOrCreateCustomer(connection, callback) {
+            var select = "SELECT id, facebook_id, facebook_email, " +
+                         "       facebook_name, facebook_token " +
+                         "FROM diner.customer " +
+                         "WHERE facebook_id = ?";
+            connection.query(select, [profile.id], function(err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    if (results.length === 0 ) {
+                        var insert = "INSERT INTO diner.customer (facebook_id, facebook_email, facebook_name, facebook_token) " +
+                                     "VALUES(?, ?, ?, ?)";
+                        connection.query(insert, [profile.id, profile.emails[0], profile.name, accessToken], function(err, result) {
+                            connection.release();
+                            if (err) {
+                                callback(err);
+                            } else {
+                                var customer = {
+                                    "id": result.insertId,
+                                    "facebook_id": result.profile.id,
+                                    "facebook_email": result.profile.email,
+                                    "facebook_name": result.profile.name
+                                };
+                                callback(null, customer);
+                            }
+                        });
+                    } else {
+                        if (accessToken === results[0].facebook_token) {
+                            connection.release();
+                            var customer = {
+                                "id": results[0].id,
+                                "facebook_id": results[0].profile.id,
+                                "facebook_email": results[0].profile.email,
+                                "facebook_name": results[0].profile.name
+                            };
+                            callback(null, customer);
+                        } else {
+                            var update = "UPDATE diner.customer " +
+                                         "SET	facebook_token = ? " +
+                                         "WHERE facebook_id = ?";
+                            connection.query(update, [accessToken, profile.id], function(err, result) {
+                                connection.release();
+                                if (err) {
+                                    callback(err);
+                                } else {
+                                    var customer = {
+                                        "id": results[0].id,
+                                        "facebook_id": results[0].profile.id,
+                                        "facebook_email": results[0].profile.email,
+                                        "facebook_name": results[0].profile.name
+                                    };
+                                    callback(null, customer);
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        async.waterfall([getConnection, selectOrCreateCustomer], function(err, customer) {
+            if (err) {
+                done(err);
+            } else {
+                done(null, customer);
+            }
+        });
+
     }));
 };
 
