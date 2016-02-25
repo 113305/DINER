@@ -74,7 +74,7 @@ router.get('/:regionId', function(req, res, next) {
                 connection.release();
                 callback(err);
             } else {
-                for (var i=0; i<restaurants.length; i++){
+                for (var i=0; i<results.length; i++){
                     restaurantId.append(results[i].id);
                     data[i] = {
                         "list_restaurant": {
