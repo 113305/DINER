@@ -11,6 +11,10 @@ global.pool = require('./config/dbpool');
 require('./config/passportconfig')(passport);
 
 var auth = require('./routes/auth');
+var customers = require('./routes/customers');
+var regions = require('./routes/regions');
+var reservations = require('./routes/reservations');
+var restaurants = require('./routes/restaurants');
 
 var app = express();
 
@@ -36,6 +40,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 app.use('/auth', auth);
+app.use('/auth', customers);
+app.use('/auth', regions);
+app.use('/auth', reservations);
+app.use('/auth', restaurants);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
