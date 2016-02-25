@@ -104,7 +104,8 @@ var passportconfig = function(passport){
 
     passport.use('facebook-token', new FacebookTokenStrategy({
         "clientID": authConfig.facebook.appId,
-        "clientSecret": authConfig.facebook.appSecret
+        "clientSecret": authConfig.facebook.appSecret,
+        "profileFields": ["id", "displayName", "emails"]
     }, function (accessToken, refreshToken, profile, done) {
 
         function getConnection(callback) {
@@ -128,9 +129,10 @@ var passportconfig = function(passport){
                     callback(err);
                 } else {
                     if (results.length === 0 ) {
-                        var insert = "INSERT INTO diner.customer (facebook_id, facebook_email, facebook_name, facebook_token) " +
+                        var insert = "INSERT INTO diner.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
                                      "VALUES(?, ?, ?, ?)";
-                        connection.query(insert, [profile.id, profile.emails[0], profile.name, accessToken], function(err, result) {
+                        connection.query(insert,
+                            [profile.id, accessToken, profile.emails[0], profile.name], function(err, result) {
                             connection.release();
                             if (err) {
                                 callback(err);
@@ -138,7 +140,7 @@ var passportconfig = function(passport){
                                 var customer = {
                                     "id": result.insertId,
                                     "facebook_id": result.profile.id,
-                                    "facebook_email": result.profile.email,
+                                    "facebook_email": result.profile.emails[0],
                                     "facebook_name": result.profile.name
                                 };
                                 callback(null, customer);
@@ -149,9 +151,9 @@ var passportconfig = function(passport){
                             connection.release();
                             var customer = {
                                 "id": results[0].id,
-                                "facebook_id": results[0].profile.id,
-                                "facebook_email": results[0].profile.email,
-                                "facebook_name": results[0].profile.name
+                                "facebook_id": results[0].facebook_id,
+                                "facebook_email": results[0].facebook_email,
+                                "facebook_name": results[0].facebook_name
                             };
                             callback(null, customer);
                         } else {
@@ -165,9 +167,9 @@ var passportconfig = function(passport){
                                 } else {
                                     var customer = {
                                         "id": results[0].id,
-                                        "facebook_id": results[0].profile.id,
-                                        "facebook_email": results[0].profile.email,
-                                        "facebook_name": results[0].profile.name
+                                        "facebook_id": results[0].facebook_id,
+                                        "facebook_email": results[0].facebook_email,
+                                        "facebook_name": results[0].facebook_name
                                     };
                                     callback(null, customer);
                                 }
@@ -185,7 +187,6 @@ var passportconfig = function(passport){
                 done(null, customer);
             }
         });
-
     }));
 };
 
