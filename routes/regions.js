@@ -61,75 +61,98 @@ router.get('/:regionId', function(req, res, next) {
     }
 
     function selectRegions (connection, callback) {
-        var sql  = "SELECT restaurant_name, address, website_url, business_hours, " +
+        var sql  = "SELECT id, restaurant_name, address, website_url, business_hours, " +
             "       reward_photo_url, reward_name, reward_info, " +
-            "       take_out, parking, smoking, break_time, discount_info, r.avg_score, " +
-            "       restaurant_phone, restaurant_info, r.dong_info, r.restaurant_class, r.price_range, " +
-            "       menu_name, menu_photo_url, m.price, m.main_ingredient, m.popular, mc.menu_class_name " +
-            "FROM restaurant r join menu m on (r.id = m.restaurant_id) " +
-            "                  join menu_class mc on (m.menu_class_id = mc.id) " +
+            "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
+            "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range, " +
+            "FROM restaurant " +
             "WHERE region_id = ?";
-
+        var restaurantId = [];
+        var data = {};
         connection.query(sql, [req.params.regionId], function (err, results) {
             if (err) {
                 connection.release();
                 callback(err);
             } else {
-                var data = [];
                 for (var i=0; i<restaurants.length; i++){
+                    restaurantId.append(results[i].id);
                     data[i] = {
                         "list_restaurant": {
-                            "restaurant_name": results[0].r.restaurant_name,
-                            "restaurant_photo_url": "",
-                            "dong_info": "",
-                            "restaurant_class": ""
+                            "restaurant_name": results[0].restaurant_name,
+                            "restaurant_photo_url": results[0].restaurant_photo_url,
+                            "dong_info": results[0].dong_info,
+                            "restaurant_class": results[0].restaurant_class
                         },
                         "detail_restaurant": {
-                            "restaurant_name": "",
-                            "address": "",
-                            "website_url": "",
-                            "price_range": "",
-                            "reward_photo_url": "",
-                            "reward_info": "",
-                            "reward_name": "",
-                            "take_out": "",
-                            "parking": "",
-                            "smoking": "",
-                            "break_time": "",
-                            "avg_score": "",
-                            "restaurant_photo_url" : [""],
-                            "restaurant_info": "",
-                            "menu": [{
-                                "menu_class_name": "",
-                                "menu_name": "",
-                                "price": "",
-                                "main_ingredient": "",
-                                "menu_photo_url": "",
-                                "popular": ""
-                            }]
+                            "restaurant_name": resutls[0].restaurant_name,
+                            "address": results[0].address,
+                            "website_url": results[0].website_url,
+                            "price_range": results[0].price_range,
+                            "reward_photo_url": results[0].reward_photo_url,
+                            "reward_info": results[0].reward_info,
+                            "reward_name": results[0].reward_name,
+                            "take_out": results[0].take_out,
+                            "parking": results[0].parking,
+                            "smoking": results[0].smoking,
+                            "break_time": results[0].break_time,
+                            "avg_score":  results[0].avg_score,
+                            "restaurant_info": results[0].restaurant_info,
+                            "restaurant_photo_url" : [],
+                            "menu": []
                         }
                     };
                 }
-                var result = {
-                    "results": {
-                        "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                        "data": data
-                    }
-
-                };
-                callback(null, results);
             }
-        })
+        });
+
+
+        for(var j=0 ; j<restaurantId.length; j++) {  // 메뉴배열
+            var sql1 =  "SELECT * " +
+                       "FROM menu " +
+                       "WHERE restaurant_id =?";
+            connection.query(sql1, [restaurantId[j]], function (err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    data[j].detail_restaurant.menu = results;
+                }
+            });
+        }
+
+        for(var k=0 ; k<restaurantId.length; k++) {  // 메뉴배열
+            var sql3 = "SELECT * " +
+                       "FROM restaurant_photo " +
+                       "WHERE restaurant_id = ?";
+            connection.query(sql3, [restaurantId[k]], function (err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    data[k].detail_restaurant.restaurant_photo_url = results;
+                }
+            });
+        }
+
+        var result = {
+            "results": {
+                "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                "data": data
+            }
+
+        };
+        callback(null, result);
+
     }
 
 
-    async.waterfall([getConnection, selectRegions], function(err, results) {
+    async.waterfall([getConnection, selectRegions], function(err, result) {
         if (err) {
             var err = new Error('레스토랑 조회에 실패하였습니다.');
             err.code = "E0010";
             next(err);
         } else {
-            res.json(results);
+            res.json(result);
         }
     });
 });
