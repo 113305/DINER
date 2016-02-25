@@ -61,12 +61,13 @@ router.get('/:regionId', function(req, res, next) {
     }
 
     function selectRegions (connection, callback) {
-        var sql  = "SELECT id, restaurant_name, address, website_url, business_hours, " +
+        var sql = "SELECT id, restaurant_name, address, website_url, business_hours, " +
             "       reward_photo_url, reward_name, reward_info, " +
             "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
             "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range, " +
             "FROM restaurant " +
-            "WHERE region_id = ?";
+            "WHERE restaurant_name = ?";
+
         var restaurantId = [];
         var data = {};
         connection.query(sql, [req.params.regionId], function (err, results) {
@@ -74,7 +75,7 @@ router.get('/:regionId', function(req, res, next) {
                 connection.release();
                 callback(err);
             } else {
-                for (var i=0; i<results.length; i++){
+                for (var i = 0; i < results.length; i++) {
                     restaurantId.append(results[i].id);
                     data[i] = {
                         "list_restaurant": {
@@ -95,63 +96,67 @@ router.get('/:regionId', function(req, res, next) {
                             "parking": results[0].parking,
                             "smoking": results[0].smoking,
                             "break_time": results[0].break_time,
-                            "avg_score":  results[0].avg_score,
+                            "avg_score": results[0].avg_score,
                             "restaurant_info": results[0].restaurant_info,
-                            "restaurant_photo_url" : [],
+                            "restaurant_photo_url": [],
                             "menu": []
                         }
                     };
                 }
+                callback(null, data);
             }
         });
+    }
 
-
-        for(var j=0 ; j<restaurantId.length; j++) {  // 메뉴배열
-            var sql1 =  "SELECT * " +
-                       "FROM menu " +
-                       "WHERE restaurant_id =?";
+    function getMenu (data, callback) {
+        for (var j = 0; j < restaurantId.length; j++) {  // 메뉴배열
+            var sql1 = "SELECT * " +
+                "FROM menu " +
+                "WHERE restaurant_id =?";
             connection.query(sql1, [restaurantId[j]], function (err, results) {
                 if (err) {
                     connection.release();
                     callback(err);
                 } else {
                     data[j].detail_restaurant.menu = results;
+                    callback(null, data);
                 }
             });
         }
+    }
 
-        for(var k=0 ; k<restaurantId.length; k++) {  // 메뉴배열
+    function getRestPhotoUrl (data, callback) {
+        for (var k = 0; k < restaurantId.length; k++) {  // 메뉴배열
             var sql3 = "SELECT * " +
-                       "FROM restaurant_photo " +
-                       "WHERE restaurant_id = ?";
+                "FROM restaurant_photo " +
+                "WHERE restaurant_id = ?";
             connection.query(sql3, [restaurantId[k]], function (err, results) {
+                connection.release();
                 if (err) {
-                    connection.release();
                     callback(err);
                 } else {
                     data[k].detail_restaurant.restaurant_photo_url = results;
+                    callback(null, data);
                 }
             });
         }
-
-        var result = {
-            "results": {
-                "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                "data": data
-            }
-
-        };
-        callback(null, result);
-
     }
+
 
 
     async.waterfall([getConnection, selectRegions], function(err, result) {
         if (err) {
             var err = new Error('레스토랑 조회에 실패하였습니다.');
+            err.status = 401;
             err.code = "E0010";
             next(err);
         } else {
+            var result = {
+                "results": {
+                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                    "data": data
+                }
+            };
             res.json(result);
         }
     });
