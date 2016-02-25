@@ -68,20 +68,72 @@ router.post('/facebook/token', function(req, res, next) {
     }
 });
 
-//router.post('/updatepassword', function(req, res, next) {
-//    if (req.secure) {
-//        var result = {
-//            "results": {
-//                "message": "비밀번호 재발급이 정상적으로 처리되었습니다."
-//            }
-//        };
-//        res.json(result);
-//    } else {
-//        var err = new Error('SSL/TLS Ugrades Required');
-//        err.status = 426;
-//        next(err);
-//    }
-//});
+router.post('/updatepassword', function(req, res, next) {
+    if (req.secure) {
+        var email = req.body.email;
+
+        function getConnection(callback) {
+            pool.getConnection(function(err, connection) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, connection);
+                }
+            });
+        }
+
+        function selectCustomer(connection, callback) {
+            var select = "SELECT id, email " +
+                         "FROM dinerdb.customer " +
+                         "WHERE email = ?";
+
+            connection.query(select, [email], function(err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    if (results.length === 0) {
+                        var err = new Error('이메일 계정 확인에 실패하였습니다.');
+                        err.status = 401;
+                        err.code = 'E0006';
+                        callback(err);
+                    } else {
+                        var customer = {
+                            "id": results[0].id,
+                            "email": results[0].email
+                        };
+                        callback(null, connection, customer);
+                    }
+                }
+            });
+        }
+
+        function updatePassword(connection, customer, callback) {
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
+                var update = "";
+
+                connection.query(update, [], function(err, result) {
+
+                });
+            }
+        }
+
+        async.waterfall([getConnection, selectCustomer], function(err) {
+            if (err) {
+                next(err);
+            } else {
+
+            }
+        });
+    } else {
+        var err = new Error('SSL/TLS Ugrades Required');
+        err.status = 426;
+        next(err);
+    }
+});
 
 
 module.exports = router;
