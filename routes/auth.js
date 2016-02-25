@@ -5,13 +5,43 @@ var passport = require('passport');
 var router = express.Router();
 
 router.post('/login', function(req, res, next) {
+    //if (req.secure) {
+    //    var result = {
+    //        "results": {
+    //            "message": "로그인이 정상적으로 처리되었습니다."
+    //        }
+    //    };
+    //    res.json(result);
+    //} else {
+    //    var err = new Error('SSL/TLS Ugrades Required');
+    //    err.status = 426;
+    //    next(err);
+    //}
+
     if (req.secure) {
-        var result = {
-            "results": {
-                "message": "로그인이 정상적으로 처리되었습니다."
+        passport.authenticate('local-login', function(err, customer, info) {
+            if(err) {
+                next(err);
+            } else if (!customer) {
+                var err = new Error('비밀번호가 일치하지 않아 로그인에 실패하였습니다.');
+                err.status = 401;
+                err.code = 'E0005b';
+                next(err);
+            } else {
+                req.logIn(user, function(err) {
+                    if (err) {
+                        next(err);
+                    } else {
+                        var result = {
+                            "results": {
+                                "message": "로그인이 정상적으로 처리되었습니다."
+                            }
+                        };
+                        res.json(result);
+                    }
+                });
             }
-        };
-        res.json(result);
+        })(req, res, next);
     } else {
         var err = new Error('SSL/TLS Ugrades Required');
         err.status = 426;
