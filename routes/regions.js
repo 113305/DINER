@@ -1,4 +1,4 @@
-// TODO: 지역 확인하기 (/regions HTTP GET)
+// 지역 확인하기 (/regions HTTP GET)
 var express = require('express');
 var async = require('async');
 var bcrypt = require('bcrypt');
@@ -40,38 +40,11 @@ router.get('/', function (req, res, next) {
             next(err);
         } else {
             res.json(results);
-            console.log('조회완료');
         }
     });
 });
 
-//
-//// TODO: 레스토랑 목록보기 (/regions/:regionId HTTP GET)
-//
-//router.get('/:regionId', function(req, res, next) {
-//    function getConnection (callback) {
-//        pool.getConnection(function(err, connection) {
-//            if (err) {
-//                callback(err);
-//            } else {
-//                callback(null, connection);
-//            }
-//        });
-//    }
-//
-//    function selectRegions (connection, callback) {
-//        var sql  = "SELECT id " +
-//                   "FROM restaurant " +
-//                   "where region_id = ?";
-//        connection.query(sql, [region_id], function (err, results) {
-//            if (err) {
-//                connection.release();
-//                callback(err);
-//            } else {
-//                callback(null)
-//            }
-//        })
-//    }
-//});
+
+// TODO: 레스토랑 목록보기 (/regions/:regionId HTTP GET)
 
 module.exports = router;
