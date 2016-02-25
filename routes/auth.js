@@ -109,23 +109,31 @@ router.post('/updatepassword', function(req, res, next) {
         }
 
         function updatePassword(connection, customer, callback) {
-            if (err) {
+            //TODO: 1. 비밀번호 랜덤으로 만들어내자
+            //TODO: 2. 업데이트하자
+            var update = "";
+            connection.query(update, [customer.id], function(err, result) {
                 connection.release();
-                callback(err);
-            } else {
-                var update = "";
-
-                connection.query(update, [], function(err, result) {
-
-                });
-            }
+                if (err) {
+                    callback(err);
+                } else {
+                    customer.password = result;
+                    callback(customer);
+                }
+            });
         }
 
-        async.waterfall([getConnection, selectCustomer], function(err) {
+        function pushMail(customer, callback){
+            //TODO: 메일 푸시하자
+            var result = {};
+            callback(result);
+        }
+
+        async.waterfall([getConnection, selectCustomer], function(err, result) {
             if (err) {
                 next(err);
             } else {
-
+                res.json(result);
             }
         });
     } else {
