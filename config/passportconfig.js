@@ -97,7 +97,6 @@ var passportconfig = function(passport){
                 done(customer);
             }
         });
-
     }));
 };
 
