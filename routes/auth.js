@@ -37,6 +37,8 @@ router.post('/login', function(req, res, next) {
     }
 });
 
+
+//페이스북가입처리가 완료된후 '/customer/me'을 이용해 이메일과 전화번호를 입력 받아야함.
 router.post('/facebook/token', function(req, res, next) {
     if (req.secure) {
         passport.authenticate('facebook-token', function(err, customer, info) {
@@ -58,7 +60,7 @@ router.post('/facebook/token', function(req, res, next) {
                     }
                 });
             }
-        });
+        })(req, res, next);
     } else {
         var err = new Err('SSL/TLS Upgrades Required');
         err.status = 426;
