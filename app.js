@@ -30,7 +30,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(session({
-    "secret": "pd11jonIrlQL1eBvv4MBF8pvugEV21PnYGTiaUaAcrM=",
+    "secret": process.env.DINER_SERVER_KEY,
     "cookie": { "maxage" : "31536000000" },
     "resave": true,
     "saveUninitialized": true
