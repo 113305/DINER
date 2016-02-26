@@ -4,8 +4,8 @@ var favicon = require('serve-favicon');
 var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
-var passport = require('passport');
 var session = require('express-session');
+var passport = require('passport');
 
 global.pool = require('./config/dbpool');
 require('./config/passportconfig')(passport);
@@ -30,7 +30,8 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(session({
-    "secret": process.env.DINER_SERVER_KEY,
+    "secret": "pd11jonIrlQL1eBvv4MBF8pvugEV21PnYGTiaUaAcrM=",
+    //"secret": process.env.DINER_SERVER_KEY,
     "cookie": { "maxage" : "31536000000" },
     "resave": true,
     "saveUninitialized": true
