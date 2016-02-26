@@ -84,7 +84,7 @@ router.post('/', function (req, res, next) {
             if (err) {
                 var err = new Error('회원가입에 실패하였습니다.');
                 err.status = 401;
-                err.code = "E0001";
+                err.code = "E0001b";
                 next(err);
             } else {
                 var results = {
