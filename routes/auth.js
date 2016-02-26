@@ -2,8 +2,8 @@ var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
 var passport = require('passport');
+var randomstring = require('randomstring');
 var router = express.Router();
-
 
 router.post('/login', function(req, res, next) {
     if (req.secure) {
@@ -16,7 +16,7 @@ router.post('/login', function(req, res, next) {
                 err.code = 'E0005b';
                 next(err);
             } else {
-                req.logIn(user, function(err) {
+                req.logIn(customer, function(err) {
                     if (err) {
                         next(err);
                     } else {
@@ -109,15 +109,22 @@ router.post('/updatepassword', function(req, res, next) {
         }
 
         function updatePassword(connection, customer, callback) {
-            //TODO: 1. 비밀번호 랜덤으로 만들어내자
+            //create random password
+            var newPassword = randomstring.generate({
+                length: 10,
+                charset: 'alphanumeric'
+            });
+
             //TODO: 2. 업데이트하자
-            var update = "";
-            connection.query(update, [customer.id], function(err, result) {
+            var update = "UPDATE dinerdb.customer " +
+                         "SET password = ? " +
+                         "WHERE customer_id = ?";
+            connection.query(update, [newPassword, customer.id], function(err, result) {
                 connection.release();
                 if (err) {
                     callback(err);
                 } else {
-                    customer.password = result;
+                    customer.password = newPassword;
                     callback(customer);
                 }
             });
@@ -142,6 +149,5 @@ router.post('/updatepassword', function(req, res, next) {
         next(err);
     }
 });
-
 
 module.exports = router;
