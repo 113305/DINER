@@ -7,7 +7,7 @@ var router = express.Router();
 
 router.get('/', function (req, res, next) {
 
-    var restaurants = req.query.restaurantName;
+    var restaurants = req.query.restaurant_name;
 
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
@@ -19,100 +19,117 @@ router.get('/', function (req, res, next) {
         });
     }
 
-    function selectRestaurant (connection, callback) {
-        var sql = "SELECT id, restaurant_name, address, website_url, business_hours, " +
-            "       reward_photo_url, reward_name, reward_info, " +
-            "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
-            "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range, " +
-            "FROM restaurant " +
-            "WHERE restaurant_name = ?";
-
-        var restaurantId = [];
-        var data = {};
-        connection.query(sql, [restaurants], function (err, results) {
-            if (err) {
-                connection.release();
+    function selectRestaurant(connection, callback) {
+        var datas = ['테스트','입니다'];
+        var select = "SELECT id, restaurant_name, address, website_url, business_hours, "+
+                     "reward_photo_url, reward_name, reward_info, "+
+                     "take_out, parking, smoking, break_time, discount_info, avg_score, "+
+                     "restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range "+
+                     "FROM restaurant "+
+                     "WHERE restaurant_name = ?";
+        connection.query(select, [restaurants], function(err, results) {
+            if(err) {
                 callback(err);
             } else {
-                for (var i = 0; i < results.length; i++) {
-                    restaurantId.append(results[i].id);
-                    data[i] = {
+                async.each(results, function(item, callback) {
+                    var data = {
                         "list_restaurant": {
-                            "restaurant_name": results[0].restaurant_name,
-                            "restaurant_photo_url": results[0].restaurant_photo_url,
-                            "dong_info": results[0].dong_info,
-                            "restaurant_class": results[0].restaurant_class
+                            "restaurant_name": item.restaurant_name,
+                            "restaurant_photo_url": item.restaurant_photo_url,
+                            "dong_info": item.dong_info,
+                            "restaurant_class": item.restaurant_class
                         },
                         "detail_restaurant": {
-                            "restaurant_name": resutls[0].restaurant_name,
-                            "address": results[0].address,
-                            "website_url": results[0].website_url,
-                            "price_range": results[0].price_range,
-                            "reward_photo_url": results[0].reward_photo_url,
-                            "reward_info": results[0].reward_info,
-                            "reward_name": results[0].reward_name,
-                            "take_out": results[0].take_out,
-                            "parking": results[0].parking,
-                            "smoking": results[0].smoking,
-                            "break_time": results[0].break_time,
-                            "avg_score": results[0].avg_score,
-                            "restaurant_info": results[0].restaurant_info,
+                            "restaurant_name": item.restaurant_name,
+                            "address": item.address,
+                            "website_url": item.website_url,
+                            "price_range": item.price_range,
+                            "reward_photo_url": item.reward_photo_url,
+                            "reward_info": item.reward_info,
+                            "reward_name": item.reward_name,
+                            "take_out": item.take_out,
+                            "parking": item.parking,
+                            "smoking": item.smoking,
+                            "break_time": item.break_time,
+                            "avg_score": item.avg_score,
+                            "restaurant_info": item.restaurant_info,
                             "restaurant_photo_url": [],
                             "menu": []
                         }
                     };
-                }
-                callback(null, data);
+
+                        var photo_select = "select restaurant_photo_url as url "+
+                            "from restaurant_photo "+
+                            "where restaurant_id = ?";
+                        connection.query(photo_select, [item.id], function(err, photo_results) {
+                            if (err) {
+                                connection.release();
+                                callback(err);
+                            } else {
+                                async.each(photo_results, function (item, callback) {
+                                    data.detail_restaurant.restaurant_photo_url.push(item.url);
+                                    console.log('사진들어감',data.detail_restaurant.restaurant_photo_url);
+                                    callback(null);
+                                }, function (err, result) {
+                                    if (err) {
+                                        connection.release();
+                                        callback(err);
+                                    } else {
+
+                                    }
+                                });
+                            }
+                        });
+
+                    var menu_select = "select menu_name, menu_photo_url, price, main_ingredient "+
+                        "from menu "+
+                        "where restaurant_id = ?";
+
+                    connection.query(menu_select, [item.id], function(err, menu_results) {
+                        if(err) {
+                            connection.release();
+                            callback(err);
+                        } else {
+                            async.each(menu_results, function(item, callback) {
+                                console.log('아이템 : ',item.menu_name);
+                                data.detail_restaurant.menu.push(item);
+                                callback(null);
+                            }, function(err, result) {
+                                if(err) {
+                                    connection.release();
+                                    callback(err);
+                                } else {
+                                    datas.push(data);
+                                    console.log('데이터스',datas);
+                                }
+                            })
+                        }
+                    });
+
+                }, function(err, result) {
+                    if(err) {
+                        callback(err);
+                    } else {
+
+                    }
+                })
+                callback(null, datas);
             }
         });
     }
 
-    function getMenu (data, callback) {
-        for (var j = 0; j < restaurantId.length; j++) {  // 메뉴배열
-            var sql1 = "SELECT * " +
-                "FROM menu " +
-                "WHERE restaurant_id =?";
-            connection.query(sql1, [restaurantId[j]], function (err, results) {
-                if (err) {
-                    connection.release();
-                    callback(err);
-                } else {
-                    data[j].detail_restaurant.menu = results;
-                    callback(null, data);
-                }
-            });
-        }
-    }
-
-    function getRestPhotoUrl (data, callback) {
-        for (var k = 0; k < restaurantId.length; k++) {  // 메뉴배열
-            var sql3 = "SELECT * " +
-                "FROM restaurant_photo " +
-                "WHERE restaurant_id = ?";
-            connection.query(sql3, [restaurantId[k]], function (err, results) {
-                connection.release();
-                if (err) {
-                    callback(err);
-                } else {
-                    data[k].detail_restaurant.restaurant_photo_url = results;
-                    callback(null, data);
-                }
-            });
-        }
-    }
-
-
-    async.waterfall([getConnection, selectRestaurant, getMenu, getRestPhotoUrl], function (err, data) {
+    async.waterfall([getConnection, selectRestaurant], function (err, datas) {
         if (err) {
             var err = new Error('레스토랑 조회에 실패하였습니다.');
             err.status = 401;
             err.code = "E0011";
             next(err);
         } else {
+            console.log('결과',datas);
             var result = {
                 "results": {
                     "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                    "data": data
+                    "data": datas
                 }
             };
             res.json(result);
