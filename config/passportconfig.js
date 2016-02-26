@@ -16,12 +16,12 @@ var passportconfig = function(passport){
                 done(err);
             } else {
                 var select = "SELECT id, customer_name " +
-                          "FROM diner.customer " +
-                          "WHERE email = ?";
+                             "FROM dinerdb.customer " +
+                             "WHERE email = ?";
                 connection.query(select, [id], function(err, results) {
                     if (err) {
-                        done(err);
                         connection.release();
+                        done(err);
                     } else {
                         var user = {
                             "id": results[0].id,
@@ -52,7 +52,7 @@ var passportconfig = function(passport){
 
         function selectCustomer(connection, callback) {
             var select = "SELECT id, customer_name, customer_acc_pwd " +
-                         "FROM diner.customer " +
+                         "FROM dinerdb.customer " +
                          "WHERE email = ?";
 
             connection.query(select, [username], function(err, results) {
@@ -84,7 +84,7 @@ var passportconfig = function(passport){
                     callback(err);
                 } else {
                     if (result) {
-                        callback(customer);
+                        callback(null, customer);
                     } else {
                         callback(null, false);
                     }
@@ -97,7 +97,7 @@ var passportconfig = function(passport){
                 done(err);
             } else {
                 delete customer.hashPassword;
-                done(customer);
+                done(null, customer);
             }
         });
     }));
@@ -121,7 +121,7 @@ var passportconfig = function(passport){
         function selectOrCreateCustomer(connection, callback) {
             var select = "SELECT id, facebook_id, facebook_email, " +
                          "       facebook_name, facebook_token " +
-                         "FROM diner.customer " +
+                         "FROM dinerdb.customer " +
                          "WHERE facebook_id = ?";
             connection.query(select, [profile.id], function(err, results) {
                 if (err) {
@@ -129,7 +129,7 @@ var passportconfig = function(passport){
                     callback(err);
                 } else {
                     if (results.length === 0 ) {
-                        var insert = "INSERT INTO diner.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
+                        var insert = "INSERT INTO dinerdb.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
                                      "VALUES(?, ?, ?, ?)";
                         connection.query(insert,
                             [profile.id, accessToken, profile.emails[0], profile.name], function(err, result) {
@@ -157,7 +157,7 @@ var passportconfig = function(passport){
                             };
                             callback(null, customer);
                         } else {
-                            var update = "UPDATE diner.customer " +
+                            var update = "UPDATE dinerdb.customer " +
                                          "SET	facebook_token = ? " +
                                          "WHERE facebook_id = ?";
                             connection.query(update, [accessToken, profile.id], function(err, result) {
