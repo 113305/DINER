@@ -128,17 +128,21 @@ var passportconfig = function(passport){
             var select = "SELECT id, facebook_id, facebook_email, " +
                          "       facebook_name, facebook_token " +
                          "FROM dinerdb.customer " +
-                         "WHERE facebook_id = ?";
+                         "WHERE facebook_id = aes_encrypt(" + connection.escape(profile.id) +
+                         "                                , unhex(" + connection.escape(hexkey) + "))";
             connection.query(select, [profile.id], function(err, results) {
                 if (err) {
                     connection.release();
                     callback(err);
                 } else {
                     if (results.length === 0 ) {
+
                         var insert = "INSERT INTO dinerdb.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
-                                     "VALUES(?, ?, ?, ?)";
-                        connection.query(insert,
-                            [profile.id, accessToken, profile.emails[0], profile.name], function(err, result) {
+                                     "VALUES(" + connection.escape(profile.id) + ", " +
+                                              connection.escape(accessToken) +
+                                              "aes_encrypt(" + connection.escape(profile.emails[0]) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
+                                              "aes_encrypt(" + connection.escape(profile.name) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
+                        connection.query(insert, function(err, result) {
                             connection.release();
                             if (err) {
                                 callback(err);
