@@ -1,27 +1,15 @@
 // TODO: 회원가입하기(/customer HTTPS POST) 암호화필요
-// 회원가입 할 때
-// member = 회원가입을 담당하는 미들웨어
 var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
 var router = express.Router();
 
-//function isLoggedIn (req, res, next) { // 로그인 성공 여부 확인
-//    if (!req.session.userId) {  // userId가 없으면
-//        var err = new Error('로그인이 필요합니다...');
-//        err.status = 401;
-//        next(err);
-//    } else {
-//        next();  // 성공하면 get 요청 처리
-//    }
-//}
-
-router.post('/', function (req, res, next) {  // 회원 가입
+router.post('/', function (req, res, next) {
     if (req.secure) {
-        var name = req.body.name;
-        var password = req.body.password;
-        var phone = req.body.phone;
-        var email = req.body.email;
+    var name = req.body.name;
+    var password = req.body.password;
+    var phone = req.body.phone;
+    var email = req.body.email;
 
         function getConnection (callback) {
             pool.getConnection(function(err, connection) {
@@ -33,11 +21,56 @@ router.post('/', function (req, res, next) {  // 회원 가입
             });
         }
 
-        function insertCustomer (connection, callback) {
-            var sql = "INSERT INTO customer (email, customer_phone, customer_name, customer_acc_pwd) " +
-                      "VALUES (?, ?, ?, ?)";
+        function selectCustomer (connection, callback) {
+            var sql = "SELECT id "+
+                      "FROM customer " +
+                      "WHERE email = ?";
+            connection.query(sql, [email], function (err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    if(results.length) {
+                        connection.release();
+                        var err = new Error('이미 사용자가 존재합니다.');
+                        err.status = 409;
+                        err.code = "E0001a";
+                        next(err);
+                    } else {
+                        callback(null, connection);
+                    }
+                }
+            });
+        }
 
-            connection.query(sql, [email, phone, name, password], function (err, result) {
+        //TODO: 1. salt generation (원본 암호를 암호화)
+        function generateSalt (connection, callback) {
+            var rounds = 10;
+            bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, salt, connection);
+                }
+            });
+        }
+        //TODO: 2. hash password generation (암호화된 원본암호를 해쉬함수를 이용해서 암호화)
+        function generateHashPassword (salt, connection, callback) {
+                bcrypt.hash(password, salt, function (err, hashPassword) {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback(null, hashPassword, connection);
+                    }
+                });
+
+        }
+
+        function insertCustomer (hashPassword, connection, callback) {
+            var sql1 = "INSERT INTO customer (email, customer_phone, customer_name, customer_acc_pwd) " +
+                       "VALUES (?, ?, ?, ?)";
+
+            connection.query(sql1, [email, phone, name, hashPassword], function (err, result) {
                connection.release();
                 if (err) {
                     callback(err);
@@ -47,16 +80,19 @@ router.post('/', function (req, res, next) {  // 회원 가입
             });
         }
 
-        async.waterfall([getConnection, insertCustomer], function (err, result) {
+        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, insertCustomer], function (err, result) {
             if (err) {
+                var err = new Error('회원가입에 실패하였습니다.');
+                err.status = 401;
+                err.code = "E0001";
                 next(err);
             } else {
-                var resultt = {
+                var results = {
                     "results": {
                         "message": "회원 가입이 정상적으로 처리되었습니다."
                     }
                 };
-                res.json(resultt);
+                res.json(results);
             }
         });
     } else {
@@ -65,72 +101,7 @@ router.post('/', function (req, res, next) {  // 회원 가입
         next(err);
     }
 });
-//
-//    //TODO: 1. salt generation (원본 암호를 암호화)
-//    //작성 다하면 투두 지우면 주석만남음
-//    function generateSalt (callback) {
-//        var rounds = 10;
-//        bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
-//            if (err) {
-//                callback(err);
-//            } else {
-//                callback(null, salt);
-//            }
-//        });
-//    }
-//
-//    //TODO: 2. hash password generation (암호화된 원본암호를 해쉬함수를 이용해서 암호화)
-//    function generateHashPassword (salt, callback) {
-//        bcrypt.hash(password, salt, function (err, hashPassword) {
-//            if (err) {
-//                callback(err);
-//            } else {
-//                callback(null, hashPassword);
-//            }
-//        });
-//
-//    }
-//
-//
-//    //TODO: 4. DB instert
-//    function insertMember(connection, hashPassword, callback) {  // 쿼리사용하면 커넥션 불러와야함
-//        var sql = "INSERT INTO memberdb.user (username, password) " +
-//            "VALUE (?, ?)";
-//        connection.query(sql, [username, hashPassword], function (err, result) {
-//            connection.release();
-//            if (err) {
-//                callback(err);
-//            } else {
-//                callback(null, {
-//                    "id": result.insertId
-//                });
-//            }
-//        });
-//
-//    }
-//
-//    async.waterfall([generateSalt, generateHashPassword, getConnection, insertMember], function(err, result) {
-//        if (err) {
-//            next(err);
-//        } else {
-//            result.message = "정상적으로 사용자가 저장되었습니다.";
-//            res.json(result);
-//        }
-//    });
-//});
-//
-//router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
-//    //DB select with req.session.userId
-//    // 후, 정보를 가져와서  res.json 정보를 클라이언트에게 전달
-//    res.json({
-//        "userId": req.session.userId
-//        //"username": "",
-//        //"photoUrl": ""
-//    });
-//});
-//
-//
-//
+
 module.exports = router;
 //// TODO: 회원정보 확인하기(/customers/me HTTPS GET)
 //
