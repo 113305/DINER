@@ -2,8 +2,7 @@
 var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
-var cryptjs = require("crypto-js");
-var KEY = process.env.DINER_SERVER_KEY;
+var hexkey = process.env.DINER_HEX_KEY;
 
 var router = express.Router();
 
@@ -27,7 +26,7 @@ router.post('/', function (req, res, next) {
         function selectCustomer (connection, callback) {
             var sql = "SELECT id "+
                       "FROM customer " +
-                      "WHERE email = ?";
+                      "WHERE email = aes_encrypt(?, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0'))";
             connection.query(sql, [email], function (err, results) {
                 if (err) {
                     connection.release();
@@ -69,23 +68,11 @@ router.post('/', function (req, res, next) {
 
         }
 
-        function generateCrypto (hashPassword, connection, callback) {
-            var encryptname = cryptjs.AES.encrypt(name, KEY).toString()
-            var encryptemail = cryptjs.AES.encrypt(email, KEY).toString()
-            var encryptphone = cryptjs.AES.encrypt(phone, KEY).toString()
+        function insertCustomer (hashPassword, connection, callback) {
+            var sql1 = "INSERT INTO customer(email, name, phone, password) " +
+                       "VALUES (aes_encrypt('?', unhex('?')), aes_encrypt('?', unhex('?')), aes_encrypt('?', unhex('?')), ?)";
 
-            if (err) {
-                callback(err);
-            } else {
-                callback(null, encryptname, encryptemail, encryptphone, hashPassword, connection);
-            }
-        }
-
-        function insertCustomer (encryptname, encryptemail, encryptphone, hashPassword, connection, callback) {
-            var sql1 = "INSERT INTO customer (email, customer_phone, customer_name, customer_acc_pwd) " +
-                       "VALUES (?, ?, ?, ?)";
-
-            connection.query(sql1, [encryptemail, encryptphone, encryptname, hashPassword], function (err, result) {
+            connection.query(sql1, [email, hexkey, name, hexkey, phone, hexkey, hashPassword], function (err, result) {
                connection.release();
                 if (err) {
                     callback(err);
@@ -95,7 +82,7 @@ router.post('/', function (req, res, next) {
             });
         }
 
-        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, generateCrypto, insertCustomer], function (err, result) {
+        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, insertCustomer], function (err, result) {
             if (err) {
                 var err = new Error('회원가입에 실패하였습니다.');
                 err.status = 401;
@@ -117,10 +104,82 @@ router.post('/', function (req, res, next) {
     }
 });
 
+//// TODO: 회원정보 확인하기(/customers/me HTTPS GET)
+//function isLoggedIn (req, res, next) { // 로그인 성공 여부 확인
+//    if (!req.session.email) {  // userId가 없으면
+//        var err = new Error('로그인이 필요합니다...');
+//        err.status = 401;
+//        next(err);
+//    } else {
+//        next();  // 성공하면 get 요청 처리
+//    }
+//}
+//
+//router.get('/me', function (req, res, next) {
+//
+//});
+
+// TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
+//function isLoggedIn (req, res, next) { // 로그인 성공 여부 확인
+//    if (!req.session.email) {
+//        var err = new Error('로그인이 필요합니다...');
+//        err.status = 401;
+//        next(err);
+//    } else {
+//        next();  // 성공시 요청 처리
+//    }
+//}
+
+router.delete('/', function (req, res, next) {
+    function getConnection(callback) {
+        pool.getConnection(function (err, connection) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, connection);
+            }
+        });
+    }
+
+    function deleteCustomer(connection, callback) {
+        var sql2 = "DELETE " +
+                   "FROM customer " +
+                   "WHERE id = ?";
+        connection.query(sql2, [req.session.id], function (err, result) {
+            connection.release();
+            if (err) {
+                callback(err);
+            } else {
+                callback(null);
+            }
+        });
+    }
+
+    async.waterfall([getConnection, deleteCustomer], function (err, result) {
+        if (err) {
+            var err = new Error('회원탈퇴에 실패하였습니다.');
+            err.status = 401;
+            err.code = "E00011b";
+            next(err);
+        } else {
+            var results = {
+                "results": {
+                    "message": "회원 탈퇴가 정상적으로 처리되었습니다."
+                }
+            };
+            res.json(results);
+        }
+    });
+});
+
+// 로그인한지 확인
+// 회원의 아이디를 셀렉트
+// DB에서 삭제
+
 
 module.exports = router;
-//// TODO: 회원정보 확인하기(/customers/me HTTPS GET)
+
 //
 //// TODO: 회원정보 변경하기 (/customers/me HTTPS PUT)
 //
-//// TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
+
