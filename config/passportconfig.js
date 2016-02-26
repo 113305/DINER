@@ -3,6 +3,7 @@ var FacebookTokenStrategy = require('passport-facebook-token');
 var bcrypt = require('bcrypt');
 var async = require('async');
 var authConfig = require('./authconfig');
+var hexkey = process.env.DINER_HEX_KEY;
 
 var passportconfig = function(passport){
 
@@ -15,19 +16,25 @@ var passportconfig = function(passport){
             if (err) {
                 done(err);
             } else {
-                var select = "SELECT id, customer_name " +
+                var select = "SELECT id, " +
+                             "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
+                             "convert(aes_decrypt(custmoer_email, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
+                             "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
                              "FROM dinerdb.customer " +
-                             "WHERE email = ?";
-                connection.query(select, [id], function(err, results) {
+                             "WHERE id = ?";
+                connection.query(select, function(err, result) {
                     if (err) {
                         connection.release();
                         done(err);
                     } else {
-                        var user = {
+                        var customer = {
                             "id": results[0].id,
-                            "name": results[0].customer_name
+                            "name": name,
+                            "email": email,
+                            "phone": phone
                         };
-                        done(null, user);
+
+                        done(null, customer);
                     }
                 });
             }
@@ -51,11 +58,12 @@ var passportconfig = function(passport){
         }
 
         function selectCustomer(connection, callback) {
-            var select = "SELECT id, customer_name, customer_acc_pwd " +
+            var select = "SELECT id, customer_acc_pwd " +
                          "FROM dinerdb.customer " +
-                         "WHERE email = ?";
+                         "WHERE email = aes_encrypt(" + connection.escape(username) +
+                         "                           , unhex(" + connection.escape(hexkey) + "))";
 
-            connection.query(select, [username], function(err, results) {
+            connection.query(select, function(err, results) {
                 connection.release();
                 if (err) {
                     callback(err);
@@ -68,8 +76,6 @@ var passportconfig = function(passport){
                     } else {
                         var customer = {
                             "id": results[0].id,
-                            "email": username,
-                            "name": results[0].custmomer_name,
                             "hashPassword": results[0].customer_acc_pwd
                         };
                         callback(null, customer);
