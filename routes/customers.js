@@ -2,6 +2,9 @@
 var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
+var cryptjs = require("crypto-js");
+var KEY = process.env.DINER_SERVER_KEY;
+
 var router = express.Router();
 
 router.post('/', function (req, res, next) {
@@ -66,11 +69,23 @@ router.post('/', function (req, res, next) {
 
         }
 
-        function insertCustomer (hashPassword, connection, callback) {
+        function generateCrypto (hashPassword, connection, callback) {
+            var encryptname = cryptjs.AES.encrypt(name, KEY).toString()
+            var encryptemail = cryptjs.AES.encrypt(email, KEY).toString()
+            var encryptphone = cryptjs.AES.encrypt(phone, KEY).toString()
+
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, encryptname, encryptemail, encryptphone, hashPassword, connection);
+            }
+        }
+
+        function insertCustomer (encryptname, encryptemail, encryptphone, hashPassword, connection, callback) {
             var sql1 = "INSERT INTO customer (email, customer_phone, customer_name, customer_acc_pwd) " +
                        "VALUES (?, ?, ?, ?)";
 
-            connection.query(sql1, [email, phone, name, hashPassword], function (err, result) {
+            connection.query(sql1, [encryptemail, encryptphone, encryptname, hashPassword], function (err, result) {
                connection.release();
                 if (err) {
                     callback(err);
@@ -80,7 +95,7 @@ router.post('/', function (req, res, next) {
             });
         }
 
-        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, insertCustomer], function (err, result) {
+        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, generateCrypto, insertCustomer], function (err, result) {
             if (err) {
                 var err = new Error('회원가입에 실패하였습니다.');
                 err.status = 401;
