@@ -16,24 +16,28 @@ var passportconfig = function(passport){
             if (err) {
                 done(err);
             } else {
+                //페이스북 정보도 추가하기
                 var select = "SELECT id, " +
-                             "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
-                             "convert(aes_decrypt(custmoer_email, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
-                             "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8), " +
+                             "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
+                             "convert(aes_decrypt(custmoer_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
+                             "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
+                             "convert(aes_decrypt(facebook_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookEmail, " +
+                             "convert(aes_decrypt(facebook_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookName " +
                              "FROM dinerdb.customer " +
-                             "WHERE id = ?";
-                connection.query(select, function(err, result) {
+                             "WHERE id = " + connection.escape(id);
+                connection.query(select, function(err, results) {
                     if (err) {
                         connection.release();
                         done(err);
                     } else {
                         var customer = {
                             "id": results[0].id,
-                            "name": name,
-                            "email": email,
-                            "phone": phone
+                            "name": results[0].name,
+                            "email": results[0].email,
+                            "phone": results[0].phone,
+                            "facebookEmail": results[0].facebookEmail,
+                            "facebookName": results[0].facebookName
                         };
-
                         done(null, customer);
                     }
                 });
@@ -125,11 +129,9 @@ var passportconfig = function(passport){
         }
 
         function selectOrCreateCustomer(connection, callback) {
-            var select = "SELECT id, facebook_id, facebook_email, " +
-                         "       facebook_name, facebook_token " +
+            var select = "SELECT id, facebook_id, facebook_token " +
                          "FROM dinerdb.customer " +
-                         "WHERE facebook_id = aes_encrypt(" + connection.escape(profile.id) +
-                         "                                , unhex(" + connection.escape(hexkey) + "))";
+                         "WHERE facebook_id = ?";
             connection.query(select, [profile.id], function(err, results) {
                 if (err) {
                     connection.release();
@@ -139,19 +141,17 @@ var passportconfig = function(passport){
 
                         var insert = "INSERT INTO dinerdb.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
                                      "VALUES(" + connection.escape(profile.id) + ", " +
-                                              connection.escape(accessToken) +
-                                              "aes_encrypt(" + connection.escape(profile.emails[0]) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
-                                              "aes_encrypt(" + connection.escape(profile.name) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
+                                                 connection.escape(accessToken) + ", " +
+                                                 "aes_encrypt(" + connection.escape(profile.emails[0]) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
+                                                 "aes_encrypt(" + connection.escape(profile.name) + ", unhex(" + connection.escape(hexkey) + "))" +
+                                            ")";
                         connection.query(insert, function(err, result) {
                             connection.release();
                             if (err) {
                                 callback(err);
                             } else {
                                 var customer = {
-                                    "id": result.insertId,
-                                    "facebook_id": result.profile.id,
-                                    "facebook_email": result.profile.emails[0],
-                                    "facebook_name": result.profile.name
+                                    "id": result.insertId
                                 };
                                 callback(null, customer);
                             }
@@ -161,9 +161,7 @@ var passportconfig = function(passport){
                             connection.release();
                             var customer = {
                                 "id": results[0].id,
-                                "facebook_id": results[0].facebook_id,
-                                "facebook_email": results[0].facebook_email,
-                                "facebook_name": results[0].facebook_name
+                                "facebook_id": results[0].facebook_id
                             };
                             callback(null, customer);
                         } else {
@@ -178,8 +176,8 @@ var passportconfig = function(passport){
                                     var customer = {
                                         "id": results[0].id,
                                         "facebook_id": results[0].facebook_id,
-                                        "facebook_email": results[0].facebook_email,
-                                        "facebook_name": results[0].facebook_name
+                                        "facebook_name": results[0].facebook_name,
+                                        "facebook_email": results[0].facebook_email
                                     };
                                     callback(null, customer);
                                 }
