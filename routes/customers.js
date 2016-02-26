@@ -26,8 +26,8 @@ router.post('/', function (req, res, next) {
         function selectCustomer (connection, callback) {
             var sql = "SELECT id "+
                       "FROM customer " +
-                      "WHERE email = aes_encrypt(?, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0'))";
-            connection.query(sql, [email], function (err, results) {
+                      "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + "))";
+            connection.query(sql, function (err, results) {
                 if (err) {
                     connection.release();
                     callback(err);
@@ -69,10 +69,13 @@ router.post('/', function (req, res, next) {
         }
 
         function insertCustomer (hashPassword, connection, callback) {
-            var sql1 = "INSERT INTO customer(email, name, phone, password) " +
-                       "VALUES (aes_encrypt('?', unhex('?')), aes_encrypt('?', unhex('?')), aes_encrypt('?', unhex('?')), ?)";
+            var sql1 = "INSERT INTO customer(email, customer_name, customer_phone, customer_acc_pwd) " +
+                       "VALUES (aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")), " +
+                       "        aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
+                       "        aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
+                                connection.escape(hashPassword) + ")";
 
-            connection.query(sql1, [email, hexkey, name, hexkey, phone, hexkey, hashPassword], function (err, result) {
+            connection.query(sql1, function (err, result) {
                connection.release();
                 if (err) {
                     callback(err);
@@ -120,61 +123,6 @@ router.post('/', function (req, res, next) {
 //});
 
 // TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
-//function isLoggedIn (req, res, next) { // 로그인 성공 여부 확인
-//    if (!req.session.email) {
-//        var err = new Error('로그인이 필요합니다...');
-//        err.status = 401;
-//        next(err);
-//    } else {
-//        next();  // 성공시 요청 처리
-//    }
-//}
-
-router.delete('/', function (req, res, next) {
-    function getConnection(callback) {
-        pool.getConnection(function (err, connection) {
-            if (err) {
-                callback(err);
-            } else {
-                callback(null, connection);
-            }
-        });
-    }
-
-    function deleteCustomer(connection, callback) {
-        var sql2 = "DELETE " +
-                   "FROM customer " +
-                   "WHERE id = ?";
-        connection.query(sql2, [req.session.id], function (err, result) {
-            connection.release();
-            if (err) {
-                callback(err);
-            } else {
-                callback(null);
-            }
-        });
-    }
-
-    async.waterfall([getConnection, deleteCustomer], function (err, result) {
-        if (err) {
-            var err = new Error('회원탈퇴에 실패하였습니다.');
-            err.status = 401;
-            err.code = "E00011b";
-            next(err);
-        } else {
-            var results = {
-                "results": {
-                    "message": "회원 탈퇴가 정상적으로 처리되었습니다."
-                }
-            };
-            res.json(results);
-        }
-    });
-});
-
-// 로그인한지 확인
-// 회원의 아이디를 셀렉트
-// DB에서 삭제
 
 
 module.exports = router;
