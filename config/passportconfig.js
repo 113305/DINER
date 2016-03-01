@@ -17,21 +17,21 @@ var passportconfig = function(passport){
                 done(err);
             } else {
                 //페이스북 정보도 추가하기
-                var select = "SELECT id, " +
+                var select = "SELECT customer_id, " +
                              "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
                              "convert(aes_decrypt(custmoer_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
                              "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
                              "convert(aes_decrypt(facebook_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookEmail, " +
                              "convert(aes_decrypt(facebook_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookName " +
-                             "FROM dinerdb.customer " +
-                             "WHERE id = " + connection.escape(id);
+                             "FROM customer " +
+                             "WHERE customer_id = " + connection.escape(id);
                 connection.query(select, function(err, results) {
                     if (err) {
                         connection.release();
                         done(err);
                     } else {
                         var customer = {
-                            "id": results[0].id,
+                            "id": results[0].customer_id,
                             "name": results[0].name,
                             "email": results[0].email,
                             "phone": results[0].phone,
@@ -62,8 +62,8 @@ var passportconfig = function(passport){
         }
 
         function selectCustomer(connection, callback) {
-            var select = "SELECT id, customer_acc_pwd " +
-                         "FROM dinerdb.customer " +
+            var select = "SELECT customer_id, customer_acc_pwd " +
+                         "FROM customer " +
                          "WHERE email = aes_encrypt(" + connection.escape(username) +
                          "                           , unhex(" + connection.escape(hexkey) + "))";
 
@@ -129,8 +129,8 @@ var passportconfig = function(passport){
         }
 
         function selectOrCreateCustomer(connection, callback) {
-            var select = "SELECT id, facebook_id, facebook_token " +
-                         "FROM dinerdb.customer " +
+            var select = "SELECT customer_id, facebook_id, facebook_token " +
+                         "FROM customer " +
                          "WHERE facebook_id = ?";
             connection.query(select, [profile.id], function(err, results) {
                 if (err) {
@@ -139,7 +139,7 @@ var passportconfig = function(passport){
                 } else {
                     if (results.length === 0 ) {
 
-                        var insert = "INSERT INTO dinerdb.customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
+                        var insert = "INSERT INTO customer (facebook_id, facebook_token, facebook_email, facebook_name) " +
                                      "VALUES(" + connection.escape(profile.id) + ", " +
                                                  connection.escape(accessToken) + ", " +
                                                  "aes_encrypt(" + connection.escape(profile.emails[0]) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
@@ -165,7 +165,7 @@ var passportconfig = function(passport){
                             };
                             callback(null, customer);
                         } else {
-                            var update = "UPDATE dinerdb.customer " +
+                            var update = "UPDATE customer " +
                                          "SET	facebook_token = ? " +
                                          "WHERE facebook_id = ?";
                             connection.query(update, [accessToken, profile.id], function(err, result) {
