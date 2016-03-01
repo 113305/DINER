@@ -4,6 +4,7 @@ var async = require('async');
 var passport = require('passport');
 var randomstring = require('randomstring');
 var router = express.Router();
+var hexkey = process.env.DINER_HEX_KEY;
 
 router.post('/login', function(req, res, next) {
     if (req.secure) {
@@ -84,7 +85,7 @@ router.post('/updatepassword', function(req, res, next) {
 
         function selectCustomer(connection, callback) {
             var select = "SELECT id, email " +
-                         "FROM dinerdb.customer " +
+                         "FROM customer " +
                          "WHERE email = ?";
 
             connection.query(select, [email], function(err, results) {
@@ -115,16 +116,15 @@ router.post('/updatepassword', function(req, res, next) {
                 charset: 'alphanumeric'
             });
 
-            //TODO: 2. 업데이트하자
-            var update = "UPDATE dinerdb.customer " +
-                         "SET password = ? " +
+            //update password
+            var update = "UPDATE customer " +
+                         "SET password = aes_encrypt(newPassword, unhex(" + connection.escape(hexkey) + ")) " +
                          "WHERE customer_id = ?";
             connection.query(update, [newPassword, customer.id], function(err, result) {
                 connection.release();
                 if (err) {
                     callback(err);
                 } else {
-                    customer.password = newPassword;
                     callback(customer);
                 }
             });
