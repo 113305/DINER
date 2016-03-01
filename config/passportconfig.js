@@ -79,7 +79,7 @@ var passportconfig = function(passport){
                         done(err);
                     } else {
                         var customer = {
-                            "id": results[0].id,
+                            "id": results[0].customer_id,
                             "hashPassword": results[0].customer_acc_pwd
                         };
                         callback(null, customer);
