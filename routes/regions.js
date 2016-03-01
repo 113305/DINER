@@ -3,6 +3,8 @@ var express = require('express');
 var async = require('async');
 var bcrypt = require('bcrypt');
 var router = express.Router();
+var url = require('url');
+var queryString = require('querystring');
 
 router.get('/', function (req, res, next) {
     function getConnection(callback) {
@@ -18,8 +20,8 @@ router.get('/', function (req, res, next) {
 
     function getRegions(connection, callback) {
         var sql = "SELECT region_name, region_photo_url " +
-                  "FROM diner.region";
-        connection.query(sql, function(err, results) {
+            "FROM region";
+        connection.query(sql, function (err, results) {
             if (err) {
                 connection.release();
                 callback(err);
@@ -35,7 +37,7 @@ router.get('/', function (req, res, next) {
         });
     }
 
-    async.waterfall([getConnection, getRegions], function(err, results) {
+    async.waterfall([getConnection, getRegions], function (err, results) {
         if (err) {
             var err = new Error('지역 조회에 실패하였습니다.');
             err.code = "E0009";
@@ -49,9 +51,12 @@ router.get('/', function (req, res, next) {
 
 // TODO: 레스토랑 목록보기 (/regions/:regionId HTTP GET)
 
-router.get('/:regionId', function(req, res, next) {
-    function getConnection (callback) {
-        pool.getConnection(function(err, connection) {
+router.get('/:regionId', function (req, res, next) {
+    var regionId = req.params.regionId;
+    var restaurantName = req.query.name;
+
+    function getConnection(callback) {
+        pool.getConnection(function (err, connection) {
             if (err) {
                 callback(err);
             } else {
@@ -60,91 +65,130 @@ router.get('/:regionId', function(req, res, next) {
         });
     }
 
-    function selectRegions (connection, callback) {
-        var sql = "SELECT id, restaurant_name, address, website_url, business_hours, " +
-            "       reward_photo_url, reward_name, reward_info, " +
-            "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
-            "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range, " +
-            "FROM restaurant " +
-            "WHERE restaurant_name = ?";
+    function selectRestaurant(connection, callback) {
 
-        var restaurantId = [];
-        var data = {};
-        connection.query(sql, [req.params.regionId], function (err, results) {
+        if (req.query === null) {  // 쿼리 없을때 (구)전체 조회 
+            //var datas = [];
+            var select = "SELECT id, restaurant_name, address, website_url, business_hours, " +
+                "reward_photo_url, reward_name, reward_info, " +
+                "take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                "restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                "FROM restaurant " +
+                "WHERE region_id = ?";
+        } else {  // 쿼리 있을때 (구에서) 이름 조회 
+            var select1 = "SELECT id, restaurant_name, address, website_url, business_hours, " +
+                "reward_photo_url, reward_name, reward_info, " +
+                "take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                "restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                "FROM restaurant " +
+                "WHERE region_id = ? and restaurant_name = ?";
+        }
+        connection.query(select, [regionId, restaurantName], function (err, results) {
             if (err) {
-                connection.release();
                 callback(err);
             } else {
-                for (var i = 0; i < results.length; i++) {
-                    restaurantId.append(results[i].id);
-                    data[i] = {
-                        "list_restaurant": {
-                            "restaurant_name": results[0].restaurant_name,
-                            "restaurant_photo_url": results[0].restaurant_photo_url,
-                            "dong_info": results[0].dong_info,
-                            "restaurant_class": results[0].restaurant_class
-                        },
-                        "detail_restaurant": {
-                            "restaurant_name": resutls[0].restaurant_name,
-                            "address": results[0].address,
-                            "website_url": results[0].website_url,
-                            "price_range": results[0].price_range,
-                            "reward_photo_url": results[0].reward_photo_url,
-                            "reward_info": results[0].reward_info,
-                            "reward_name": results[0].reward_name,
-                            "take_out": results[0].take_out,
-                            "parking": results[0].parking,
-                            "smoking": results[0].smoking,
-                            "break_time": results[0].break_time,
-                            "avg_score": results[0].avg_score,
-                            "restaurant_info": results[0].restaurant_info,
-                            "restaurant_photo_url": [],
-                            "menu": []
-                        }
-                    };
-                }
-                callback(null, data);
+                //console.log(results + "12312");
+                callback(null, connection, results);
             }
         });
     }
 
-    function getMenu (data, callback) {
-        for (var j = 0; j < restaurantId.length; j++) {  // 메뉴배열
-            var sql1 = "SELECT * " +
-                "FROM menu " +
-                "WHERE restaurant_id =?";
-            connection.query(sql1, [restaurantId[j]], function (err, results) {
+    function selectRestaurantDetails(connection, results, callback) {
+        var idx = 0;
+        async.eachSeries(results, function (item, cb) {
+            var photo_select = "select restaurant_photo_url as url " +
+                "from restaurant_photo " +
+                "where restaurant_id = ?";
+            var menu_select = "select menu_name, menu_photo_url, price, main_ingredient " +
+                "from menu " +
+                "where restaurant_id = ?";
+            async.series([function (cb2) {
+                connection.query(photo_select, item.id, function (err, restaurant_photo_results) {
+                    if (err) {
+                        cb2(err);
+                    } else {
+                        results[idx].restaurant_photo_url = restaurant_photo_results;
+                        console.log(restaurant_photo_results);
+                        cb2(null);
+                    }
+                });
+            }, function (cb2) {
+                connection.query(menu_select, item.id, function (err, restaurant_menu_results) {
+                    if (err) {
+                        cb2(err);
+                    } else {
+                        results[idx].menu = restaurant_menu_results;
+                        cb2(null);
+                    }
+                });
+            }], function (err) {
                 if (err) {
-                    connection.release();
-                    callback(err);
+                    cb(err);
                 } else {
-                    data[j].detail_restaurant.menu = results;
-                    callback(null, data);
+                    idx++;
+                    cb(null);
                 }
             });
-        }
-    }
-
-    function getRestPhotoUrl (data, callback) {
-        for (var k = 0; k < restaurantId.length; k++) {  // 메뉴배열
-            var sql3 = "SELECT * " +
-                "FROM restaurant_photo " +
-                "WHERE restaurant_id = ?";
-            connection.query(sql3, [restaurantId[k]], function (err, results) {
+        }, function (err) {
+            if (err) {
+                callback(err);
+            } else {
                 connection.release();
-                if (err) {
-                    callback(err);
-                } else {
-                    data[k].detail_restaurant.restaurant_photo_url = results;
-                    callback(null, data);
-                }
-            });
-        }
+                callback(null, results);
+            }
+        });
+
     }
 
+    function makeJSON(results, callback) {
+        //JSON 객체 생성
 
+        var restaurantList = [];
 
-    async.waterfall([getConnection, selectRegions], function(err, result) {
+        async.eachSeries(results, function (item, cb) {
+            var data = {
+                "list_restaurant": {
+                    "restaurant_name": item.restaurant_name,
+                    "restaurant_photo_url": item.restarant_photo_url[0],
+                    "dong_info": item.dong_info,
+                    "restaurant_calss": item.restaurant_class
+                },
+                "detail_restaurant": {
+                    "restaurant_name": item.restaurant_name,
+                    "address": item.address,
+                    "website_url": item.website_url,
+                    "price_range": item.price_range,
+                    "reward_photo_url": item.reward_photo_url,
+                    "reward_info": item.reward_info,
+                    "reward_name": item.reward_name,
+                    "take_out": item.take_out,
+                    "parking": item.parking,
+                    "smoking": item.smoking,
+                    "break_time": item.break_time,
+                    "avg_score": item.avg_score,
+                    "restaurant_info": item.restaurant_info,
+                    "restaurant_photo_url": item.restaurant_photo_url,
+                    "menu": item.menu
+                }
+
+            };
+            restaurantList.push(data);
+            cb(null);
+        }, function (err) {
+            if (err) {
+                callback(err);
+            } else {
+                console.log(restaurantList);
+                var result = {
+                    "data": restaurantList
+                };
+                callback(null, result);
+            }
+        });
+
+    }
+
+    async.waterfall([getConnection, selectRestaurant, selectRestaurantDetails, makeJSON], function (err, result) {
         if (err) {
             var err = new Error('레스토랑 조회에 실패하였습니다.');
             err.status = 401;
@@ -154,10 +198,10 @@ router.get('/:regionId', function(req, res, next) {
             var result = {
                 "results": {
                     "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                    "data": data
+                    "data": result.data
                 }
             };
-            res.json(result);
+            res.json(results);
         }
     });
 });
