@@ -39,6 +39,7 @@ router.route('/')
         var restaurantName = req.query.name;
         var customerId = req.session.id;
 
+        console.log(restaurantName);
         function getConnection(callback) {
             pool.getConnection(function (err, connection) {
                 if (err) {
@@ -49,30 +50,55 @@ router.route('/')
             });
         }
 
-        function selectReservationId(connection, callback) {
-            var select = "SELECT reser.id as id " +
-                         "FROM reservation reser join (SELECT id, restaurant_name " +
-                         "                             FROM restaurant) resto " +
-                         "                       on (reser.restaurant_id = resto.id) " +
-                         "WHERE resto.restaurant_name = ? and reser.customer_id = ? and reser.state = '완료' and date(reser.date_time) = date(now())";
+        function selectRestaurantId(connection, callback) {
+            var select = "SELECT restaurant_id " +
+                "         FROM restaurant " +
+                "         WHERE restaurant_name = ?";
+
             connection.query(select, [restaurantName, customerId], function(err, results) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    if (!results[0]) {
+                        var err = new Error('레스토랑 정보 조회에 실패하였습니다.');
+                        err.code = 'E0007a';
+                        callback(err);
+                    } else {
+                        var restaurantId = results[0].restaurant_id;
+                        callback(null, connection, restaurantId);
+                    }
+                }
+            });
+        }
+
+        function selectReservationId(connection, restaurantId, callback) {
+            var select = "SELECT reservation_id " +
+                         "FROM reservation " +
+                         "WHERE restaurant_id = ? and state='완료'";
+
+            connection.query(select, [restaurantId], function(err, results) {
                 connection.release();
                 if (err) {
                    callback(err);
-               } else {
-                   var reservation = {
-                       "id": results[0].id
-                   };
-                   callback(null, reservation);
-               }
+                } else {
+                    if (!results[0]) {
+                        var err = new Error('예약 정보 조회에 실패하였습니다.');
+                        err.code = 'E0007b';
+                        callback(err);
+                    } else {
+                        var reservation = {
+                            "id": results[0].reservation_id
+                        };
+                        callback(null, reservation);
+                    }
+                }
             });
         }
 
 
-        async.waterfall([getConnection, selectReservationId], function(err, reservation) {
+        async.waterfall([getConnection, selectRestaurantId, selectReservationId], function(err, reservation) {
            if (err) {
-               var err = new Error('예약 정보 조회에 실패하였습니다.');
-               err.code = 'E0007';
                next(err);
            } else {
                var result = {
@@ -106,23 +132,36 @@ router.route('/:reservationId')
             });
         }
 
-        function selectCustomer (connection, callback) {
-            var select = "SELECT c.id as id, c.show_count as showCount " +
-                         "FROM reservation r join (SELECT id, show_count " +
-                         "                         FROM customer) c " +
-                         "                   on (r.customer_id = c.id) " +
-                         "WHERE r.id = ?";
+        function selectCustomerId (connection, callback) {
+            var select = "SELECT customer_id " +
+                "FROM reservation " +
+                "WHERE reservation_id = ?";
 
             connection.query(select, [reservationId], function(err, results) {
-               if (err) {
-                   callback(err);
-               } else {
-                   var customer = {
-                       "id": results[0].id,
-                       "showCount": results[0].showCount
-                   };
-                   callback(null, connection, customer);
-               }
+
+                if (err) {
+                    callback(err);
+                } else {
+                    var customer = {
+                        "id": results[0].customer_id
+                    };
+                    callback(null, connection, customer);
+                }
+            });
+        }
+
+        function selectCustomerShowCount (connection, customer, callback) {
+            var select = "SELECT show_count " +
+                "FROM customer " +
+                "WHERE customer_id = ?";
+
+            connection.query(select, [customer.id], function(err, results) {
+                if (err) {
+                    callback(err);
+                } else {
+                    customer.showCount = results[0].show_count;
+                    callback(null, connection, customer);
+                }
             });
         }
 
@@ -131,7 +170,7 @@ router.route('/:reservationId')
             var newShowCount = customer.showCount + 1;
             var update = "UPDATE customer " +
                          "SET	show_count = ? " +
-                         "WHERE id= ?";
+                         "WHERE customer_id= ?";
 
             connection.query(update, [newShowCount, customer.id], function(err , result) {
                 if (err) {
@@ -142,7 +181,7 @@ router.route('/:reservationId')
             });
         }
 
-        async.waterfall([getConnection, selectCustomer, updateShowCount], function(err) {
+        async.waterfall([getConnection, selectCustomerId, selectCustomerShowCount, updateShowCount], function(err) {
            if (err) {
                var err = new Error('show 확인에 실패하였습니다.');
                err.code = 'E0008';
