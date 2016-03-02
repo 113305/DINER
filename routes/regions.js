@@ -20,7 +20,7 @@ router.get('/', function (req, res, next) {
 
     function getRegions(connection, callback) {
         var sql = "SELECT region_name, region_photo_url " +
-            "FROM region";
+                  "FROM region";
         connection.query(sql, function (err, results) {
             if (err) {
                 connection.release();
@@ -67,28 +67,33 @@ router.get('/:regionId', function (req, res, next) {
 
     function selectRestaurant(connection, callback) {
 
-        if (req.query === null) {  // 쿼리 없을때 (구)전체 조회 
-            //var datas = [];
-            var select = "SELECT id, restaurant_name, address, website_url, business_hours, " +
-                "reward_photo_url, reward_name, reward_info, " +
-                "take_out, parking, smoking, break_time, discount_info, avg_score, " +
-                "restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
-                "FROM restaurant " +
-                "WHERE region_id = ?";
+        if (req.query.name === undefined) {  // 쿼리 없을때 (구)전체 조회
+            var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
+                         "       reward_photo_url, reward_name, reward_info, " +
+                         "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                         "FROM restaurant " +
+                         "WHERE region_id = ?";
         } else {  // 쿼리 있을때 (구에서) 이름 조회 
-            var select1 = "SELECT id, restaurant_name, address, website_url, business_hours, " +
-                "reward_photo_url, reward_name, reward_info, " +
-                "take_out, parking, smoking, break_time, discount_info, avg_score, " +
-                "restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
-                "FROM restaurant " +
-                "WHERE region_id = ? and restaurant_name = ?";
+            var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
+                         "       reward_photo_url, reward_name, reward_info, " +
+                         "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                         "FROM restaurant " +
+                         "WHERE region_id = ? and restaurant_name = ?";
         }
         connection.query(select, [regionId, restaurantName], function (err, results) {
             if (err) {
                 callback(err);
             } else {
-                //console.log(results + "12312");
-                callback(null, connection, results);
+                if (results.length === 0) {
+                    var err = new Error('검색 결과가 없습니다.');
+                    err.code = "E0010a";
+                    next(err);
+                } else {
+                    callback(null, connection, results);
+                }
+
             }
         });
     }
@@ -103,7 +108,7 @@ router.get('/:regionId', function (req, res, next) {
                 "from menu " +
                 "where restaurant_id = ?";
             async.series([function (cb2) {
-                connection.query(photo_select, item.id, function (err, restaurant_photo_results) {
+                connection.query(photo_select, item.restaurant_id, function (err, restaurant_photo_results) {
                     if (err) {
                         cb2(err);
                     } else {
@@ -113,7 +118,7 @@ router.get('/:regionId', function (req, res, next) {
                     }
                 });
             }, function (cb2) {
-                connection.query(menu_select, item.id, function (err, restaurant_menu_results) {
+                connection.query(menu_select, item.restaurant_id, function (err, restaurant_menu_results) {
                     if (err) {
                         cb2(err);
                     } else {
@@ -146,10 +151,9 @@ router.get('/:regionId', function (req, res, next) {
         var restaurantList = [];
 
         async.eachSeries(results, function (item, cb) {
-            var data = {
+            var restaurant_element = {
                 "list_restaurant": {
                     "restaurant_name": item.restaurant_name,
-                    "restaurant_photo_url": item.restarant_photo_url[0],
                     "dong_info": item.dong_info,
                     "restaurant_calss": item.restaurant_class
                 },
@@ -172,7 +176,8 @@ router.get('/:regionId', function (req, res, next) {
                 }
 
             };
-            restaurantList.push(data);
+            restaurant_element.list_restaurant.restaurant_photo_url = restaurant_element.detail_restaurant.restaurant_photo_url[0];
+            restaurantList.push(restaurant_element);
             cb(null);
         }, function (err) {
             if (err) {
@@ -192,7 +197,7 @@ router.get('/:regionId', function (req, res, next) {
         if (err) {
             var err = new Error('레스토랑 조회에 실패하였습니다.');
             err.status = 401;
-            err.code = "E0010";
+            err.code = "E0010b";
             next(err);
         } else {
             var result = {
@@ -201,7 +206,7 @@ router.get('/:regionId', function (req, res, next) {
                     "data": result.data
                 }
             };
-            res.json(results);
+            res.json(result);
         }
     });
 });
