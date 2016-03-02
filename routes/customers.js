@@ -191,7 +191,7 @@ router.delete('/', isLoggedIn, function (req, res, next) {
 
 });
 
-// TODO: 회원정보 확인하기(/customers/me HTTPS GET)
+// TODO: 회원정보 확인하기(/customers/me HTTPS GET) showcount로 noshow카운트 계산하기 (전체 완료 예약건수 - showcount)
 router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 
     var customer = req.user;  // 세션에저장된 user정보 id, name, phone, email, password, facebookEnail, facebookName
