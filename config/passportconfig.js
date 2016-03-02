@@ -7,8 +7,8 @@ var hexkey = process.env.DINER_HEX_KEY;
 
 var passportconfig = function(passport){
 
-    passport.serializeUser(function(user, done) {
-        done(null, user.id);
+    passport.serializeUser(function(customer, done) {
+        done(null, customer.id);
     });
 
     passport.deserializeUser(function(id, done) {
@@ -129,7 +129,7 @@ var passportconfig = function(passport){
         }
 
         function selectOrCreateCustomer(connection, callback) {
-            var select = "SELECT customer_id, facebook_id, facebook_token " +
+            var select = "SELECT customer_id, facebook_token " +
                          "FROM customer " +
                          "WHERE facebook_id = ?";
             connection.query(select, [profile.id], function(err, results) {
@@ -143,7 +143,7 @@ var passportconfig = function(passport){
                                      "VALUES(" + connection.escape(profile.id) + ", " +
                                                  connection.escape(accessToken) + ", " +
                                                  "aes_encrypt(" + connection.escape(profile.emails[0]) + ", unhex(" + connection.escape(hexkey) + "))" +  ", " +
-                                                 "aes_encrypt(" + connection.escape(profile.name) + ", unhex(" + connection.escape(hexkey) + "))" +
+                                                 "aes_encrypt(" + connection.escape(profile.displayName) + ", unhex(" + connection.escape(hexkey) + "))" +
                                             ")";
                         connection.query(insert, function(err, result) {
                             connection.release();
@@ -160,8 +160,7 @@ var passportconfig = function(passport){
                         if (accessToken === results[0].facebook_token) {
                             connection.release();
                             var customer = {
-                                "id": results[0].id,
-                                "facebook_id": results[0].facebook_id
+                                "id": results[0].customer_id
                             };
                             callback(null, customer);
                         } else {
@@ -174,10 +173,7 @@ var passportconfig = function(passport){
                                     callback(err);
                                 } else {
                                     var customer = {
-                                        "id": results[0].id,
-                                        "facebook_id": results[0].facebook_id,
-                                        "facebook_name": results[0].facebook_name,
-                                        "facebook_email": results[0].facebook_email
+                                        "id": results[0].customer_id
                                     };
                                     callback(null, customer);
                                 }
