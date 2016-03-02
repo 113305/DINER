@@ -115,7 +115,6 @@ router.get('/', function (req, res, next) {
                     "restaurant_photo_url": item.restaurant_photo_url,
                     "menu": item.menu
                 }
-
             };
             restaurant_element.list_restaurant.restaurant_photo_url = restaurant_element.detail_restaurant.restaurant_photo_url[0];
             restaurantList.push(restaurant_element);
