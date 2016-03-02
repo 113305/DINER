@@ -5,7 +5,7 @@ var router = express.Router();
 
 
 
-// TODO: 예약하기 (/reservations HTTP POST)
+// TODO: 예약하기 (/reservations HTTP POST) noshowpro계산해서 넣기
 
 function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
     if (!req.isAuthenticated()) {
@@ -65,7 +65,7 @@ router.route('/:restaurantId/reserve')
                    "results": {
                        "message": "예약이 정상적으로 처리되었습니다."
                    }
-               }
+               };
                res.json(results);
            }
         });
