@@ -7,7 +7,6 @@ var router = express.Router();
 var hexkey = process.env.DINER_HEX_KEY;
 
 
-//login할때 reegister_token 받아오기
 router.post('/login', function(req, res, next) {
     if (req.secure) {
         var registrationToken = req.body.registrationToken;
