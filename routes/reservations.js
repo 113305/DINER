@@ -6,38 +6,75 @@ var router = express.Router();
 
 
 // TODO: 예약하기 (/reservations HTTP POST)
-router.route('/')
-    //.post(function(req, res, next) {
-    //    var dateTime = req.body.dateTime;
-    //    var adultNumber = req.body.adultNumber;
-    //    var childNumber = req.body.childNumber;
-    //    var etcRequest = req.body.etcRequest;
-    //    var quantity = req.body.quantity;
-    //    var menuName = req.body.menuName;
-    //
-    //    function getConnection(callback) {
-    //        pool.getConnection(function(err, connection) {
-    //           if (err) {
-    //               callback(err);
-    //           } else {
-    //               callback(null, connection);
-    //           }
-    //        });
-    //    }
-    //
-    //    async.waterfall([getConnection], function(err, result) {
-    //       if (err) {
-    //           next(err);
-    //       } else {
-    //           req.json(result);
-    //       }
-    //    });
-    //})
+
+function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
+    if (!req.isAuthenticated()) {
+        var err = new Error('로그인이 필요합니다...');
+        err.status = 401;
+        next(err);
+    } else {
+        next();  // 성공시 요청 처리
+    }
+}
+
+router.route('/:restaurantId/reserve')
+    .post(isLoggedIn, function(req, res, next) {
+        var customer = req.user;
+
+        var restaurantId = req.params.restaurantId;
+        var dateTime = req.body.dateTime;
+        var adultNumber = req.body.adultNumber;
+        var childNumber = req.body.childNumber;
+        var etcRequest = req.body.etcRequest;
+        var quantity = req.body.quantity;
+        var menuName = req.body.menuName;
+
+        function getConnection(callback) {
+            pool.getConnection(function(err, connection) {
+               if (err) {
+                   callback(err);
+               } else {
+                   callback(null, connection);
+               }
+            });
+        }
+
+        function insertReservation (connection, callback) {
+            var sql = "INSERT INTO reservation(customer_id, restaurant_id, date_time, adult_number, " +
+                      "            child_number, etc_request, " +
+                      "            state) " +
+                      "VALUES (?, ?, ?, ?, ?, ?, default)";
+            connection.query(sql, [customer.id, restaurantId, dateTime, adultNumber, childNumber, etcRequest], function (err, result) {
+                connection.release();
+                if (err) {
+                    callback(err);
+                } else {
+                    console.log('결과', result);
+                    callback(null, result);
+                }
+            })
+        }
+
+        async.waterfall([getConnection, insertReservation], function(err, result) {
+           if (err) {
+               var err = new Error('예약에 실패하였습니다.');
+               err.code = "E0013";
+               next(err);
+           } else {
+               var results = {
+                   "results": {
+                       "message": "예약이 정상적으로 처리되었습니다."
+                   }
+               }
+               res.json(results);
+           }
+        });
+    })
 
     // show 확인하기 (QR) (/reservations HTTP GET)
     .get(function(req, res, next) {
         var restaurantName = req.query.name;
-        var customerId = req.session.id;
+        var customerId = req.user.id;
 
         console.log(restaurantName);
         function getConnection(callback) {
