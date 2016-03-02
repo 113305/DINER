@@ -133,12 +133,12 @@ router.delete('/', isLoggedIn, function (req, res, next) {
         var sql2 = "DELETE " +
             "FROM customer " +
             "WHERE customer_id = ?";
-        connection.query(sql2, [req.session.id], function (err, result) {
+        connection.query(sql2, [req.user.id], function (err, result) {
             connection.release();
             if (err) {
                 callback(err);
             } else {
-                console.log('세션아이디',req.session.id);
+                console.log('d유저아이디', req.user.id);
                 callback(null);
             }
         });
@@ -178,26 +178,24 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 
     function getCustomer(connection, callback) {  //페북으로 가입한사람이랑 로컬가입한사람이랑 어떻게 보여주지? 
 
-        if (!req.session.facebookName === null)  //페이스북회원
-        {
+        //if (!req.session.facebookName === null)  //페이스북회원
+        //{
+        //
+        //} else { // 로컬회원
+        //
+        //}
+        var sql = "SELECT convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, "  +
+                  "       convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
+                  "       convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
+                  "show_count " +
+        "FROM customer " +
+        "WHERE customer_id = ?";
 
-        } else { // 로컬회원
-
-        }
-        //var sql = "SELECT convert(aes_decrypt(email, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0')) using utf8),
-        //convert(aes_decrypt(customer_name, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0')) using utf8),
-        //convert(aes_decrypt(customer_phone, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0')) using utf8),
-        //show_count,
-        //    convert(aes_decrypt(facebook_email, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0')) using utf8),
-        //convert(aes_decrypt(facebook_name, unhex('62cd950982ee48dfc4352a516c599ccb5ee3e88ddaf4adb04081a5acf09aa3b0')) using utf8)
-        //FROM customer
-        //WHERE customer_id = 42;
-
-
-        connection.query(sql, [req.session.id], function (err, result) {
+        connection.query(sql, [req.user.id], function (err, result) {
             if (err) {
                 callback(err);
             } else {
+                console.log('결과', result);
                 callback(null, result);
             }
         });
@@ -215,9 +213,9 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                     "message": "회원의 정보 조회가 정상적으로 처리되었습니다.",
                     "data": {
                         "customer": {
-                            "customer_name": result.customer_name,
-                            "customer_phone": result.customer_phone,
-                            "email": result.email
+                            "customer_name": result[0].name,
+                            "customer_phone": result[0].phone,
+                            "show_count": result[0].show_count
                         },
                         "reservation": {
                             "restaurant_name": "",
@@ -253,16 +251,17 @@ router.put('/', isLoggedIn, function (req, res, next) {
     }
 
     function updateCustomer(connection, callback) {
-        var sql = "UPDATE dinerdb " +
+        var sql = "UPDATE customer " +
             "SET aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
             "    aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
             "    aes_encrypt(" + connection.escape(password) + ", unhex(" + connection.escape(hexkey) + ")), " +
             "WHERE customer_id = ?";
-        connection.query(sql, [req.session.id], function (err, result) {
+        connection.query(sql, [req.user.id], function (err, result) {
             connection.release();
             if (err) {
                 callback(err);
             } else {
+                console.log('변경정보', req.user.id);
                 callback(null);
             }
         });
