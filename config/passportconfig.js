@@ -7,8 +7,8 @@ var hexkey = process.env.DINER_HEX_KEY;
 
 var passportconfig = function(passport){
 
-    passport.serializeUser(function(customer, done) {
-        done(null, customer.id);
+    passport.serializeUser(function(user, done) {
+        done(null, user.id);
     });
 
     passport.deserializeUser(function(id, done) {
@@ -16,7 +16,6 @@ var passportconfig = function(passport){
             if (err) {
                 done(err);
             } else {
-                //페이스북 정보도 추가하기
                 var select = "SELECT customer_id, " +
                              "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
                              "convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
@@ -25,12 +24,13 @@ var passportconfig = function(passport){
                              "convert(aes_decrypt(facebook_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookName " +
                              "FROM customer " +
                              "WHERE customer_id = " + connection.escape(id);
+
                 connection.query(select, function(err, results) {
+                    connection.release();
                     if (err) {
-                        connection.release();
                         done(err);
                     } else {
-                        var customer = {
+                        var user = {
                             "id": results[0].customer_id,
                             "name": results[0].name,
                             "email": results[0].email,
@@ -38,7 +38,7 @@ var passportconfig = function(passport){
                             "facebookEmail": results[0].facebookEmail,
                             "facebookName": results[0].facebookName
                         };
-                        done(null, customer);
+                        done(null, user);
                     }
                 });
             }
