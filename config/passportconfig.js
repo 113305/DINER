@@ -19,7 +19,7 @@ var passportconfig = function(passport){
                 //페이스북 정보도 추가하기
                 var select = "SELECT customer_id, " +
                              "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
-                             "convert(aes_decrypt(custmoer_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
+                             "convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
                              "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
                              "convert(aes_decrypt(facebook_email, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookEmail, " +
                              "convert(aes_decrypt(facebook_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookName " +

@@ -60,7 +60,7 @@ router.route('/')
                     connection.release();
                     callback(err);
                 } else {
-                    if (!results[0]) {
+                    if (results.length === 0) {
                         var err = new Error('레스토랑 정보 조회에 실패하였습니다.');
                         err.code = 'E0007a';
                         callback(err);
@@ -82,7 +82,7 @@ router.route('/')
                 if (err) {
                    callback(err);
                 } else {
-                    if (!results[0]) {
+                    if (results.length === 0) {
                         var err = new Error('예약 정보 조회에 실패하였습니다.');
                         err.code = 'E0007b';
                         callback(err);
