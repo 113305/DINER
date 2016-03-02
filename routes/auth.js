@@ -6,8 +6,11 @@ var randomstring = require('randomstring');
 var router = express.Router();
 var hexkey = process.env.DINER_HEX_KEY;
 
+
+//login할때 reegister_token 받아오기
 router.post('/login', function(req, res, next) {
     if (req.secure) {
+        var registrationToken = req.body.registrationToken;
         passport.authenticate('local-login', function(err, customer, info) {
             if(err) {
                 next(err);
@@ -21,12 +24,45 @@ router.post('/login', function(req, res, next) {
                     if (err) {
                         next(err);
                     } else {
-                        var result = {
-                            "results": {
-                                "message": "로그인이 정상적으로 처리되었습니다."
+                        function getConnection(callback) {
+                            pool.getConnection(function (err, connection) {
+                                if (err) {
+                                  callback(err);
+                                }  else {
+                                  callback(null, connection);
+                              }
+                            });
+                        }
+
+                        function updateRegistrationToken(connection, callback) {
+                            var update = "UPDATE customer " +
+                                         "SET registration_token = ? " +
+                                         "WHERE customer_id = ?";
+
+                            connection.query(update, [registrationToken, req.user.id], function(err, result) {
+                                connection.release();
+                                if (err) {
+                                    var err = new Error('registrationToken 업데이트가 실패했습니다.');
+                                    err.code = '';
+                                    callback(err);
+                                } else {
+                                    callback(null);
+                                }
+                            });
+                        }
+
+                        async.waterfall([getConnection, updateRegistrationToken], function(err) {
+                            if (err) {
+                                next(err);
+                            } else {
+                                var result = {
+                                    "results": {
+                                        "message": "로그인이 정상적으로 처리되었습니다."
+                                    }
+                                };
+                                res.json(result);
                             }
-                        };
-                        res.json(result);
+                        });
                     }
                 });
             }
