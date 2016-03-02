@@ -158,6 +158,7 @@ router.route('/:reservationId')
     //show 확인하기 (check) (/reservations/:reservationId HTTP POST)
     .post(function(req, res, next) {
         var reservationId = req.params.reservationId;
+        var score = req.body.score;
 
         function getConnection(callback) {
             pool.getConnection(function(err, connection) {
@@ -206,10 +207,10 @@ router.route('/:reservationId')
         function updateShowCount(connection, customer, callback) {
             var newShowCount = customer.showCount + 1;
             var update = "UPDATE customer " +
-                         "SET	show_count = ? " +
+                         "SET	show_count = ?, score = ? " +
                          "WHERE customer_id= ?";
 
-            connection.query(update, [newShowCount, customer.id], function(err , result) {
+            connection.query(update, [newShowCount, score, customer.id], function(err , result) {
                 if (err) {
                     callback(err);
                 } else {
