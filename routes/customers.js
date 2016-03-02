@@ -120,6 +120,8 @@ router.post('/', function (req, res, next) {
 
 // TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
 router.delete('/', isLoggedIn, function (req, res, next) {
+    var customer = req.user;
+
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
             if (err) {
@@ -129,22 +131,49 @@ router.delete('/', isLoggedIn, function (req, res, next) {
             }
         });
     }
-    function deleteCustomer(connection, callback) {
+
+    function selectReservation (connection, callback) {
+        var sql = "SELECT reservation_id " +
+                  "FROM reservation " +
+                  "WHERE customer_id = ?";
+        connection.query(sql, [customer.id], function (err, result) {
+           if (err) {
+               callback(err);
+           } else {
+               callback(null, connection, result);
+           }
+        });
+    }
+
+    function deleteReservation (connection, result, callback) {
+        var sql = "DELETE " +
+                  "FROM reservation " +
+                  "WHERE reservation_id in (?)";
+
+        connection.query(sql, [result], function (err, result) {
+           if (err) {
+               callback(err);
+           } else {
+               callback(null, connection, result)
+           }
+        });
+    }
+
+    function deleteCustomer(connection, result, callback) {
         var sql2 = "DELETE " +
             "FROM customer " +
             "WHERE customer_id = ?";
-        connection.query(sql2, [req.user.id], function (err, result) {
+        connection.query(sql2, [customer.id], function (err, result) {
             connection.release();
             if (err) {
                 callback(err);
             } else {
-                console.log('d유저아이디', req.user.id);
                 callback(null);
             }
         });
     }
 
-    async.waterfall([getConnection, deleteCustomer], function (err, result) {
+    async.waterfall([getConnection, selectReservation, deleteReservation, deleteCustomer], function (err, result) {
         if (err) {
             var err = new Error('회원탈퇴에 실패하였습니다.');
             err.status = 401;
@@ -164,8 +193,10 @@ router.delete('/', isLoggedIn, function (req, res, next) {
 
 // TODO: 회원정보 확인하기(/customers/me HTTPS GET)
 router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
-    //DB select with req.session.userId
-    // 후, 정보를 가져와서  res.json 정보를 클라이언트에게 전달
+
+    var customer = req.user;  // 세션에저장된 user정보 id, name, phone, email, password, facebookEnail, facebookName
+    var result = {};
+
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
             if (err) {
@@ -184,24 +215,87 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
         //} else { // 로컬회원
         //
         //}
-        var sql = "SELECT convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, "  +
-                  "       convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
-                  "       convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
-                  "show_count " +
-        "FROM customer " +
-        "WHERE customer_id = ?";
+        var sql = "SELECT show_count " +
+                  "FROM customer " +
+                  "WHERE customer_id = ?";
 
-        connection.query(sql, [req.user.id], function (err, result) {
+        connection.query(sql, [customer.id], function (err, result) {
             if (err) {
-                callback(err);
-            } else {
-                console.log('결과', result);
-                callback(null, result);
+                connection.release();
+               callback(err);
+           } else {
+                result = {
+                    "profile": {
+                        "email": customer.email,
+                        "phone": customer.phone,
+                        "name": customer.name,
+                        "showCount": result[0].show_count
+                    }
+                };
+                console.log('리절트1', result);
+                callback(null, connection, result);
             }
         });
     }
 
-    async.waterfall([getConnection, getCustomer], function (err, result) {
+    function getReservation (connection, result, callback) {
+        var sql = "select reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request "+
+        "from reservation res join restaurant r on (res.restaurant_id = r.restaurant_id) "+
+        "where customer_id = ?";
+
+        connection.query(sql, [customer.id], function (err, results) {
+            if(err) {
+                connection.release();
+                callback(err);
+            } else {
+                var reservationId = results[0].reservation_id;
+                result.reservation = {
+                    "restaurant_name": results[0].restaurant_name,
+                    "date_time": results[0].date_time,
+                    "adult_number": results[0].adult_number,
+                    "child_number": results[0].child_number,
+                    "etc_request": results[0].etc_request,
+                    "menu": []
+                };
+                console.log('리절트2', result);
+                callback(null, connection, result, reservationId);
+            }
+        });
+    }
+
+    function selectReservationMenu (connection, result, reservationId, callback) {
+        var sql = "select menu_name, quantity " +
+        "from menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+        "where reservation_id = ?";
+
+        connection.query(sql, [reservationId], function (err, results) {
+           if (err) {
+               callback(err);
+           } else {
+               async.eachSeries(results, function (menu, cb) {
+                   result.reservation.menu.push({
+                       "menu_name": menu.menu_name,
+                       "quantity": menu.quantity
+                   });
+                   console.log('리절트3', result);
+                   console.log('메뉴배열', results);
+                   cb(null);
+               }, function(err) {
+                   if(err){
+                       cb(err);
+                   } else {
+                       console.log('리졀트4', result);
+                       callback(null, result);
+                   }
+               });
+           }
+        });
+
+    }
+
+
+    async.waterfall([getConnection, getCustomer, getReservation, selectReservationMenu], function (err, result) {
+        console.log('리절트5', result);
         if (err) {
             var err = new Error('회원 정보 조회에 실패하였습니다.');
             err.status = 401;
@@ -211,23 +305,10 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
             var results = {
                 "results": {
                     "message": "회원의 정보 조회가 정상적으로 처리되었습니다.",
-                    "data": {
-                        "customer": {
-                            "customer_name": result[0].name,
-                            "customer_phone": result[0].phone,
-                            "show_count": result[0].show_count
-                        },
-                        "reservation": {
-                            "restaurant_name": "",
-                            "adult_number": "",
-                            "child_number": "",
-                            "date_time": "",
-                            "score": "",
-                            "etc_request": ""
-                        }
-                    }
+                    "data": result
                 }
-            }
+            };
+            console.log('리절트5', result);
             res.json(results);
         }
     });
@@ -236,6 +317,8 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 
 //// TODO: 회원정보 변경하기 (/customers/me HTTPS PUT)
 router.put('/', isLoggedIn, function (req, res, next) {
+    var customer = req.user;
+
     var name = req.body.name;
     var password = req.body.password;
     var phone = req.body.phone;
@@ -254,19 +337,19 @@ router.put('/', isLoggedIn, function (req, res, next) {
         var sql = "UPDATE customer " +
             "SET aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
             "    aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
-            "    aes_encrypt(" + connection.escape(password) + ", unhex(" + connection.escape(hexkey) + ")), " +
-            "WHERE customer_id = ?";
-        connection.query(sql, [req.user.id], function (err, result) {
+            "    aes_encrypt(" + connection.escape(password) + ", unhex(" + connection.escape(hexkey) + ")) " +
+            "WHERE customer_id = " + connection.escape(customer.id);
+        connection.query(sql, function (err, result) {
             connection.release();
             if (err) {
                 callback(err);
             } else {
-                console.log('변경정보', req.user.id);
+                console.log('변경정보', result);
                 callback(null);
             }
         });
     }
-    async.waterfall([getConnection, updateCustomer], function (err, result) {
+    async.waterfall([getConnection, updateCustomer], function (err) {
         if (err) {
             var err = new Error('회원정보 변경에 실패하였습니다.');
             err.status = 401;
