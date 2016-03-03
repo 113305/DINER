@@ -16,13 +16,13 @@ function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
     }
 }
 
-// TODO: 회원가입하기(/customer HTTPS POST)
+// TODO: 회원가입하기(/customers HTTPS POST)
 router.post('/', function (req, res, next) {
     if (req.secure) {
-        var name = req.body.name;
+        var name = req.body.customerName;
         var password = req.body.password;
-        var phone = req.body.phone;
-        var email = req.body.email;
+        var phone = req.body.customerPhone;
+        var email = req.body.customerEmail;
 
         function getConnection(callback) {
             pool.getConnection(function (err, connection) {
@@ -36,8 +36,8 @@ router.post('/', function (req, res, next) {
 
         function selectCustomer(connection, callback) {
             var sql = "SELECT customer_id " +
-                "FROM customer " +
-                "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + "))";
+                      "FROM customer " +
+                      "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")) ";
             connection.query(sql, function (err, results) {
                 if (err) {
                     connection.release();
@@ -63,6 +63,7 @@ router.post('/', function (req, res, next) {
                 if (err) {
                     callback(err);
                 } else {
+                    console.log('솔트문자열', salt);
                     callback(null, salt, connection);
                 }
             });
@@ -73,6 +74,7 @@ router.post('/', function (req, res, next) {
                 if (err) {
                     callback(err);
                 } else {
+                    console.log('해쉬암호', hashPassword);
                     callback(null, hashPassword, connection);
                 }
             });
@@ -84,13 +86,14 @@ router.post('/', function (req, res, next) {
                 "VALUES (aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")), " +
                 "        aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
                 "        aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
-                         connection.escape(hashPassword) + ")";
+                         connection.escape(hashPassword) + ") ";
 
             connection.query(sql1, function (err, result) {
                 connection.release();
                 if (err) {
                     callback(err);
                 } else {
+                    console.log('회원가입결과', result);
                     callback(null);
                 }
             });
@@ -120,7 +123,7 @@ router.post('/', function (req, res, next) {
 
 // TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
 // 바로 삭제하면 안되니까
-// 상태를 만들어서 active: 0, inactive: 1. 탈퇴요청: 2 이런식으루
+// 상태를 만들어서 active: 0, 탈퇴요청: 1 (로그인안되게) 이런식으루
 
 router.delete('/', isLoggedIn, function (req, res, next) {
     var customer = req.user;
@@ -135,46 +138,50 @@ router.delete('/', isLoggedIn, function (req, res, next) {
         });
     }
 
-    function selectReservation (connection, callback) {
-        var sql = "SELECT reservation_id " +
-                  "FROM reservation " +
-                  "WHERE customer_id = ?";
-        connection.query(sql, [customer.id], function (err, result) {
-           if (err) {
-               callback(err);
-           } else {
-               callback(null, connection, result);
-           }
-        });
-    }
-
-    function deleteReservation (connection, result, callback) {
-        var sql = "DELETE " +
-                  "FROM reservation " +
-                  "WHERE reservation_id in (?)";
-
-        connection.query(sql, [result], function (err, result) {
-           if (err) {
-               callback(err);
-           } else {
-               callback(null, connection, result)
-           }
-        });
-    }
-
-    function deleteCustomer(connection, result, callback) {
-        var sql2 = "DELETE " +
-            "FROM customer " +
-            "WHERE customer_id = ?";
-        connection.query(sql2, [customer.id], function (err, result) {
-            connection.release();
-            if (err) {
-                callback(err);
-            } else {
-                callback(null);
-            }
-        });
-    }
+    //function updateCustomerState (connection, callback) {
+    //    var sql =
+    //}
+    ////
+    ////function selectReservation (connection, callback) {
+    ////    var sql = "SELECT reservation_id " +
+    //              "FROM reservation " +
+    //              "WHERE customer_id = ?";
+    //    connection.query(sql, [customer.id], function (err, result) {
+    //       if (err) {
+    //           callback(err);
+    //       } else {
+    //           callback(null, connection, result);
+    //       }
+    //    });
+    //}
+    //
+    //function deleteReservation (connection, result, callback) {
+    //    var sql = "DELETE " +
+    //              "FROM reservation " +
+    //              "WHERE reservation_id in (?)";
+    //
+    //    connection.query(sql, [result], function (err, result) {
+    //       if (err) {
+    //           callback(err);
+    //       } else {
+    //           callback(null, connection, result)
+    //       }
+    //    });
+    //}
+    //
+    //function deleteCustomer(connection, result, callback) {
+    //    var sql2 = "DELETE " +
+    //        "FROM customer " +
+    //        "WHERE customer_id = ?";
+    //    connection.query(sql2, [customer.id], function (err, result) {
+    //        connection.release();
+    //        if (err) {
+    //            callback(err);
+    //        } else {
+    //            callback(null);
+    //        }
+    //    });
+    //}
 
     async.waterfall([getConnection, selectReservation, deleteReservation, deleteCustomer], function (err, result) {
         if (err) {
@@ -210,14 +217,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
         });
     }
 
-    function getCustomer(connection, callback) {  //페북으로 가입한사람이랑 로컬가입한사람이랑 어떻게 보여주지? 
-
-        //if (!req.session.facebookName === null)  //페이스북회원
-        //{
-        //
-        //} else { // 로컬회원
-        //
-        //}
+    function getCustomer(connection, callback) {
         var sql = "SELECT show_count " +
                   "FROM customer " +
                   "WHERE customer_id = ?";
@@ -229,9 +229,9 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
            } else {
                 result = {
                     "profile": {
-                        "email": customer.email,
-                        "phone": customer.phone,
-                        "name": customer.name,
+                        "customerEmail": customer.email,
+                        "customerName": customer.name,
+                        "customerPhone": customer.phone,
                         "showCount": result[0].show_count
                     },
                     "reservation": []
@@ -243,7 +243,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     }
 
     function getReservation (connection, result, callback) {
-        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request "+
+        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request, score "+
                   "FROM reservation res join restaurant r on (res.restaurant_id = r.restaurant_id) "+
                   "WHERE customer_id = ?";
 
@@ -256,11 +256,9 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                 async.eachSeries(results, function (element, cb1) {
                     element.menu = [];
 
-                    //console.log('엘리먼트', element);
-
-                    var sql1 = "select menu_name, quantity " +
-                        "from menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
-                        "where reservation_id = ?";
+                    var sql1 = "SELECT menu_name, quantity " +
+                               "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+                               "WHERE reservation_id = ?";
 
                     connection.query(sql1, [element.reservation_id], function (err, results1) {
                         if (err) {
@@ -269,7 +267,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                         } else {
                             async.eachSeries(results1, function (menu, cb2) {
                                 element.menu.push({
-                                    "menu_name": menu.menu_name,
+                                    "menuName": menu.menu_name,
                                     "quantity": menu.quantity
                                 });
                                 cb2(null);
@@ -278,12 +276,12 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                                     cb2(err);
                                 } else {
                                     result.reservation.push({
-                                        "restaurant_id": element.restaurant_id,
-                                        "restaurant_name": element.restaurant_name,
-                                        "date_time": element.date_time,
-                                        "adult_number": element.adult_number,
-                                        "child_number": element.child_number,
-                                        "etc_request": element.etc_request,
+                                        "restaurantId": element.restaurant_id,
+                                        "restaurantName": element.restaurant_name,
+                                        "dateTime": element.date_time,
+                                        "adultNumber": element.adult_number,
+                                        "childNumber": element.child_number,
+                                        "etcRequest": element.etc_request,
                                         "menu": element.menu
                                     });
                                     cb1(null, result);
