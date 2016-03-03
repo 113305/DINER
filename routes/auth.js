@@ -109,7 +109,7 @@ router.post('/facebook/token', function(req, res, next) {
 
 router.post('/updatepassword', function(req, res, next) {
     if (req.secure) {
-        var email = req.body.email;
+        var customerEmail = req.body.email;
         //create random password
         var newPassword = randomstring.generate({
             length: 10,
@@ -129,7 +129,7 @@ router.post('/updatepassword', function(req, res, next) {
         function selectCustomer(connection, callback) {
             var select = "SELECT customer_id, convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email " +
                          "FROM customer " +
-                         "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")) ";
+                         "WHERE email = aes_encrypt(" + connection.escape(customerEmail) + ", unhex(" + connection.escape(hexkey) + ")) ";
 
             connection.query(select, function(err, results) {
                 if (err) {
