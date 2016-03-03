@@ -104,8 +104,8 @@ router.get('/:regionId', function (req, res, next) {
             var photo_select = "SELECT restaurant_photo_url as url " +
                                "FROM restaurant_photo " +
                                "WHERE restaurant_id = ?";
-            var menu_select = "SELECT menu_name, menu_photo_url, price, main_ingredient " +
-                              "FROM menu " +
+            var menu_select = "SELECT m.menu_class_id, menu_class_name, menu_name, menu_photo_url, price, main_ingredient " +
+                              "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
                               "WHERE restaurant_id = ?";
             async.series([function (cb2) {
                 connection.query(photo_select, item.restaurant_id, function (err, restaurant_photo_results) {
