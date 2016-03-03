@@ -42,7 +42,7 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
     function insertReservation (connection, callback) {
         var sql = "INSERT INTO reservation(customer_id, restaurant_id, date_time, adult_number, " +
                   "            child_number, etc_request, " +
-                  "            state) " +
+                  "            reservation_state) " +
                   "VALUES (?, ?, ?, ?, ?, ?, default)";
         connection.query(sql, [customer.id, restaurantId, dateTime, adultNumber, childNumber, etcRequest], function (err, result) {
             connection.release();
@@ -69,8 +69,10 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
            res.json(results);
        }
     });
-})
+});
 
+
+//TODO 당일날짜만 쇼확인가능하게하기
 // show 확인하기 (QR) (/reservations HTTP GET)
 router.get('/', isLoggedIn, function(req, res, next) {
     var restaurantName = req.query.name;
@@ -112,7 +114,7 @@ router.get('/', isLoggedIn, function(req, res, next) {
     function selectReservationId(connection, restaurantId, callback) {
         var select = "SELECT reservation_id " +
                      "FROM reservation " +
-                     "WHERE restaurant_id = ? and state='완료'";
+                     "WHERE restaurant_id = ? and reservation_state=1";
 
         connection.query(select, [restaurantId], function(err, results) {
             connection.release();
