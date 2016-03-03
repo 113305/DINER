@@ -40,12 +40,12 @@ router.get('/', function (req, res, next) {
     function selectRestaurantDetails(connection, results, callback) {
         var idx = 0;
         async.eachSeries(results, function (item, cb) {
-            var photo_select = "select restaurant_photo_url as url " +
-                               "from restaurant_photo " +
-                               "where restaurant_id = ?";
-            var menu_select = "select menu_name, menu_photo_url, price, main_ingredient " +
-                              "from menu " +
-                              "where restaurant_id = ?";
+            var photo_select = "SELECT restaurant_photo_url as url " +
+                               "FROM restaurant_photo " +
+                               "WHERE restaurant_id = ?";
+            var menu_select = "SELECT m.menu_class_id, menu_class_name, menu_name, menu_photo_url, price, main_ingredient " +
+                              "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
+                              "WHERE restaurant_id = ?";
             async.series([function (cb2) {
                 connection.query(photo_select, item.restaurant_id, function (err, restaurant_photo_results) {
                     console.log('아이템', item);
@@ -114,6 +114,7 @@ router.get('/', function (req, res, next) {
                     "restaurant_info": item.restaurant_info,
                     "restaurant_photo_url": item.restaurant_photo_url,
                     "menu": item.menu
+
                 }
             };
             restaurant_element.list_restaurant.restaurant_photo_url = restaurant_element.detail_restaurant.restaurant_photo_url[0];
