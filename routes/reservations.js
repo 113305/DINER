@@ -72,7 +72,7 @@ router.route('/:restaurantId/reserve')
     })
 
     // show 확인하기 (QR) (/reservations HTTP GET)
-    .get(function(req, res, next) {
+    .get(isLoggedIn, function(req, res, next) {
         var restaurantName = req.query.name;
         var customerId = req.user.id;
 
