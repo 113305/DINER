@@ -69,7 +69,7 @@ var passportconfig = function(passport){
         }
 
         function selectCustomer(connection, callback) {
-            var select = "SELECT customer_id, customer_acc_pwd " +
+            var select = "SELECT customer_id, customer_acc_pwd, customer_state " +
                          "FROM customer " +
                          "WHERE email = aes_encrypt(" + connection.escape(username) +
                          "                           , unhex(" + connection.escape(hexkey) + "))";
@@ -83,6 +83,11 @@ var passportconfig = function(passport){
                         var err = new Error('이메일 계정이 존재하지 않아 로그인에 실패하였습니다.');
                         err.status = 401;
                         err.code = 'E0005a';
+                        done(err);
+                    } else if(results[0].customer_state === 1) {
+                        var err = new Error('탈퇴 처리 중인 고객이므로 로그인에 실패하였습니다.');
+                        err.status = 401;
+                        err.code = 'E0005c';
                         done(err);
                     } else {
                         var customer = {
