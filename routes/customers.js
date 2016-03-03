@@ -119,6 +119,9 @@ router.post('/', function (req, res, next) {
 });
 
 // TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
+// 바로 삭제하면 안되니까
+// 상태를 만들어서 active: 0, inactive: 1. 탈퇴요청: 2 이런식으루
+
 router.delete('/', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
@@ -222,7 +225,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
         connection.query(sql, [customer.id], function (err, result) {
             if (err) {
                 connection.release();
-               callback(err);
+                callback(err);
            } else {
                 result = {
                     "profile": {
@@ -230,7 +233,8 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                         "phone": customer.phone,
                         "name": customer.name,
                         "showCount": result[0].show_count
-                    }
+                    },
+                    "reservation": []
                 };
                 console.log('리절트1', result);
                 callback(null, connection, result);
@@ -239,63 +243,89 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     }
 
     function getReservation (connection, result, callback) {
-        var sql = "select reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request "+
-        "from reservation res join restaurant r on (res.restaurant_id = r.restaurant_id) "+
-        "where customer_id = ?";
+        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request "+
+                  "FROM reservation res join restaurant r on (res.restaurant_id = r.restaurant_id) "+
+                  "WHERE customer_id = ?";
+
 
         connection.query(sql, [customer.id], function (err, results) {
             if(err) {
                 connection.release();
                 callback(err);
             } else {
-                var reservationId = results[0].reservation_id;
-                result.reservation = {
-                    "restaurant_name": results[0].restaurant_name,
-                    "date_time": results[0].date_time,
-                    "adult_number": results[0].adult_number,
-                    "child_number": results[0].child_number,
-                    "etc_request": results[0].etc_request,
-                    "menu": []
-                };
-                console.log('리절트2', result);
-                callback(null, connection, result, reservationId);
+                async.eachSeries(results, function (element, cb1) {
+                    element.menu = [];
+
+                    //console.log('엘리먼트', element);
+
+                    var sql1 = "select menu_name, quantity " +
+                        "from menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+                        "where reservation_id = ?";
+
+                    connection.query(sql1, [element.reservation_id], function (err, results1) {
+                        if (err) {
+                            connection.release();
+                            callback(err);
+                        } else {
+                            async.eachSeries(results1, function (menu, cb2) {
+                                element.menu.push({
+                                    "menu_name": menu.menu_name,
+                                    "quantity": menu.quantity
+                                });
+                                cb2(null);
+                            }, function(err) {
+                                if(err){
+                                    cb2(err);
+                                } else {
+                                    result.reservation.push({
+                                        "restaurant_id": element.restaurant_id,
+                                        "restaurant_name": element.restaurant_name,
+                                        "date_time": element.date_time,
+                                        "adult_number": element.adult_number,
+                                        "child_number": element.child_number,
+                                        "etc_request": element.etc_request,
+                                        "menu": element.menu
+                                    });
+                                    cb1(null, result);
+                                }
+                            });
+                        }
+                    });
+                }, function(err) {
+                    if(err){
+                        cb1(err);
+                    } else {
+                        callback(null, connection, result);
+                    }
+                });
             }
         });
     }
 
-    function selectReservationMenu (connection, result, reservationId, callback) {
-        var sql = "select menu_name, quantity " +
-        "from menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
-        "where reservation_id = ?";
+    function getPhoto(connection, result, callback) {
+        async.eachSeries(result.reservation, function (item, cb) {
+            var sql = "SELECT restaurant_photo_url " +
+                      "FROM restaurant_photo " +
+                      "WHERE restaurant_id = ?";
 
-        connection.query(sql, [reservationId], function (err, results) {
-           if (err) {
-               callback(err);
-           } else {
-               async.eachSeries(results, function (menu, cb) {
-                   result.reservation.menu.push({
-                       "menu_name": menu.menu_name,
-                       "quantity": menu.quantity
-                   });
-                   console.log('리절트3', result);
-                   console.log('메뉴배열', results);
+            connection.query(sql, [item.restaurant_id], function (err, results) {
+               if (err) {
+                   callback(err);
+               } else {
+                   item.photo = results[0].restaurant_photo_url;
                    cb(null);
-               }, function(err) {
-                   if(err){
-                       cb(err);
-                   } else {
-                       console.log('리졀트4', result);
-                       callback(null, result);
-                   }
-               });
-           }
+               }
+            });
+        }, function (err) {
+            if (err) {
+                cb(err);
+            } else {
+                callback(null, result)
+            }
         });
-
     }
 
-
-    async.waterfall([getConnection, getCustomer, getReservation, selectReservationMenu], function (err, result) {
-        console.log('리절트5', result);
+    async.waterfall([getConnection, getCustomer, getReservation, getPhoto], function (err, result) {
         if (err) {
             var err = new Error('회원 정보 조회에 실패하였습니다.');
             err.status = 401;
@@ -308,15 +338,14 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                     "data": result
                 }
             };
-            console.log('리절트5', result);
             res.json(results);
         }
     });
 });
 
 
-//// TODO: 회원정보 변경하기 (/customers/me HTTPS PUT)
-router.put('/', isLoggedIn, function (req, res, next) {
+//// TODO: 회원정보 변경하기 (/customers/me HTTPS PUT)  경우의수가 너무 많은데?? 바꿀때마다 다 바꾸긴 좀..
+router.put('/me', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
     var name = req.body.name;
@@ -333,23 +362,47 @@ router.put('/', isLoggedIn, function (req, res, next) {
         });
     }
 
-    function updateCustomer(connection, callback) {
-        var sql = "UPDATE customer " +
-            "SET aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
-            "    aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
-            "    aes_encrypt(" + connection.escape(password) + ", unhex(" + connection.escape(hexkey) + ")) " +
-            "WHERE customer_id = " + connection.escape(customer.id);
-        connection.query(sql, function (err, result) {
-            connection.release();
+    function generateSalt(connection, callback) {
+        var rounds = 10;
+        bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
             if (err) {
                 callback(err);
             } else {
-                console.log('변경정보', result);
+                callback(null, salt, connection);
+            }
+        });
+    }
+
+    function generateHashPassword(salt, connection, callback) {
+        bcrypt.hash(password, salt, function (err, hashPassword) {
+            if (err) {
+                callback(err);
+            } else {
+                var password1 = hashPassword;
+                callback(null, connection, password1);
+            }
+        });
+    }
+
+
+        function updateCustomer(connection, password1, callback) {
+        var sql = "UPDATE customer " +
+                  "SET customer_name = aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
+                  "    customer_phone = aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
+                  "    customer_acc_pwd = " + connection.escape(password1) +
+                  "WHERE customer_id = " + connection.escape(customer.id);
+        connection.query(sql, function (err, result) {
+
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
                 callback(null);
             }
         });
     }
-    async.waterfall([getConnection, updateCustomer], function (err) {
+
+    async.waterfall([getConnection, generateSalt, generateHashPassword, updateCustomer], function (err) {
         if (err) {
             var err = new Error('회원정보 변경에 실패하였습니다.');
             err.status = 401;
