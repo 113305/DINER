@@ -72,11 +72,10 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
 });
 
 
-//TODO 당일날짜만 쇼확인가능하게하기
 // show 확인하기 (QR) (/reservations HTTP GET)
 router.get('/', isLoggedIn, function(req, res, next) {
-    var restaurantName = req.query.name;
-    var customerId = req.user.id;
+    var restaurantName = req.query.restaurantName;
+    var customerId = req.user.customerId;
 
     console.log(restaurantName);
     function getConnection(callback) {
@@ -94,7 +93,7 @@ router.get('/', isLoggedIn, function(req, res, next) {
             "         FROM restaurant " +
             "         WHERE restaurant_name = ?";
 
-        connection.query(select, [restaurantName, customerId], function(err, results) {
+        connection.query(select, [restaurantName], function(err, results) {
             if (err) {
                 connection.release();
                 callback(err);
@@ -114,9 +113,9 @@ router.get('/', isLoggedIn, function(req, res, next) {
     function selectReservationId(connection, restaurantId, callback) {
         var select = "SELECT reservation_id " +
                      "FROM reservation " +
-                     "WHERE restaurant_id = ? and reservation_state=1";
+                     "WHERE restaurant_id = ? and customer_id = ? and reservation_state=1 and date(date_time) = date(now())";
 
-        connection.query(select, [restaurantId], function(err, results) {
+        connection.query(select, [restaurantId, customerId], function(err, results) {
             connection.release();
             if (err) {
                callback(err);
@@ -158,10 +157,11 @@ router.get('/', isLoggedIn, function(req, res, next) {
 
 router.route('/:reservationId')
     //show 확인하기 (check) (/reservations/:reservationId HTTP POST)
-    .post(function(req, res, next) {
+    .post(isLoggedIn, function(req, res, next) {
         var reservationId = req.params.reservationId;
         var score = req.body.score;
-
+        var customer = req.user;
+        var newShowCount = 0;
         function getConnection(callback) {
             pool.getConnection(function(err, connection) {
                 if (err) {
@@ -172,56 +172,77 @@ router.route('/:reservationId')
             });
         }
 
-        function selectCustomerId (connection, callback) {
-            var select = "SELECT customer_id " +
-                "FROM reservation " +
-                "WHERE reservation_id = ?";
-
-            connection.query(select, [reservationId], function(err, results) {
-
+        function showCheck (connection, callback) {
+            connection.beginTransaction(function(err) {
                 if (err) {
+                    connection.release();
                     callback(err);
                 } else {
-                    var customer = {
-                        "id": results[0].customer_id
-                    };
-                    callback(null, connection, customer);
+                    function updateScore (cb) {
+                        var update = "UPDATE reservation " +
+                                     "SET	score = ? " +
+                                     "WHERE customer_id = ? and reservation_id = ?";
+
+                        connection.query(update, [score, customer.customerId, reservationId], function(err, results) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb(err);
+                            } else {
+                                cb(null);
+                            }
+                        });
+                    }
+
+                    function selectCustomerShowCount (cb) {
+                        var select = "SELECT show_count " +
+                            "FROM customer " +
+                            "WHERE customer_id = ?";
+
+                        connection.query(select, [customer.customerId], function(err, results) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb(err);
+                            } else {
+                                newShowCount = results[0].show_count + 1;
+                                cb(null);
+                            }
+                        });
+                    }
+
+                    function updateShowCount(cb) {
+                        var update = "UPDATE customer " +
+                            "SET	show_count = ? " +
+                            "WHERE customer_id= ?";
+
+                        connection.query(update, [newShowCount, customer.customerId], function(err , result) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb(err);
+                            } else {
+                                connection.commit();
+                                connection.release();
+                                cb(null);
+                            }
+                        });
+                    }
+
+                    async.series([updateScore, selectCustomerShowCount, updateShowCount], function(err, results) {
+                        if (err) {
+                            callback(err);
+                        } else {
+                            callback(null);
+                        }
+                    });
                 }
             });
         }
 
-        function selectCustomerShowCount (connection, customer, callback) {
-            var select = "SELECT show_count " +
-                "FROM customer " +
-                "WHERE customer_id = ?";
-
-            connection.query(select, [customer.id], function(err, results) {
-                if (err) {
-                    callback(err);
-                } else {
-                    customer.showCount = results[0].show_count;
-                    callback(null, connection, customer);
-                }
-            });
-        }
 
 
-        function updateShowCount(connection, customer, callback) {
-            var newShowCount = customer.showCount + 1;
-            var update = "UPDATE customer " +
-                         "SET	show_count = ?, score = ? " +
-                         "WHERE customer_id= ?";
-
-            connection.query(update, [newShowCount, score, customer.id], function(err , result) {
-                if (err) {
-                    callback(err);
-                } else {
-                    callback(null);
-                }
-            });
-        }
-
-        async.waterfall([getConnection, selectCustomerId, selectCustomerShowCount, updateShowCount], function(err) {
+        async.waterfall([getConnection, showCheck], function(err) {
            if (err) {
                var err = new Error('show 확인에 실패하였습니다.');
                err.code = 'E0008';
