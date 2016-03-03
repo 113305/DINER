@@ -30,14 +30,21 @@ var passportconfig = function(passport){
                     if (err) {
                         done(err);
                     } else {
-                        var user = {
-                            "id": results[0].customer_id,
-                            "name": results[0].name,
-                            "email": results[0].email,
-                            "phone": results[0].phone,
-                            "facebookEmail": results[0].facebookEmail,
-                            "facebookName": results[0].facebookName
-                        };
+                        if (results[0].name) {
+                            var user = {
+                                "customerId": results[0].customer_id,
+                                "customerName": results[0].name,
+                                "customerEmail": results[0].email,
+                                "customerPhone": results[0].phone
+                            };
+                        } else {
+                            var user = {
+                                "customerId": results[0].customer_id,
+                                "customerName": results[0].facebookName,
+                                "customerEmail": results[0].email,
+                                "customerPhone": results[0].phone
+                            };
+                        }
                         done(null, user);
                     }
                 });
@@ -46,7 +53,7 @@ var passportconfig = function(passport){
     });
 
     passport.use('local-login', new LocalStrategy({
-        usernameField: "email",
+        usernameField: "customerEmail",
         passwordField: "password",
         passReqToCallback: true
     }, function(req, username, password, done) {
