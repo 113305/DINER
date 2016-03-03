@@ -3,6 +3,9 @@ var bcrypt = require('bcrypt');
 var async = require('async');
 var passport = require('passport');
 var randomstring = require('randomstring');
+var nodemailer = require('nodemailer');
+var sesTransport = require('nodemailer-ses-transport');
+var sesConfig = require('../config/sesconfig');
 var router = express.Router();
 var hexkey = process.env.DINER_HEX_KEY;
 
@@ -107,6 +110,11 @@ router.post('/facebook/token', function(req, res, next) {
 router.post('/updatepassword', function(req, res, next) {
     if (req.secure) {
         var email = req.body.email;
+        //create random password
+        var newPassword = randomstring.generate({
+            length: 10,
+            charset: 'alphanumeric'
+        });
 
         function getConnection(callback) {
             pool.getConnection(function(err, connection) {
@@ -119,11 +127,11 @@ router.post('/updatepassword', function(req, res, next) {
         }
 
         function selectCustomer(connection, callback) {
-            var select = "SELECT id, email " +
+            var select = "SELECT customer_id, convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email " +
                          "FROM customer " +
-                         "WHERE email = ?";
+                         "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")) ";
 
-            connection.query(select, [email], function(err, results) {
+            connection.query(select, function(err, results) {
                 if (err) {
                     connection.release();
                     callback(err);
@@ -131,11 +139,11 @@ router.post('/updatepassword', function(req, res, next) {
                     if (results.length === 0) {
                         var err = new Error('이메일 계정 확인에 실패하였습니다.');
                         err.status = 401;
-                        err.code = 'E0006';
+                        err.code = 'E0006a';
                         callback(err);
                     } else {
                         var customer = {
-                            "id": results[0].id,
+                            "id": results[0].customer_id,
                             "email": results[0].email
                         };
                         callback(null, connection, customer);
@@ -144,34 +152,86 @@ router.post('/updatepassword', function(req, res, next) {
             });
         }
 
-        function updatePassword(connection, customer, callback) {
-            //create random password
-            var newPassword = randomstring.generate({
-                length: 10,
-                charset: 'alphanumeric'
-            });
-
-            //update password
-            var update = "UPDATE customer " +
-                         "SET password = aes_encrypt(newPassword, unhex(" + connection.escape(hexkey) + ")) " +
-                         "WHERE customer_id = ?";
-            connection.query(update, [newPassword, customer.id], function(err, result) {
-                connection.release();
+        function generateSalt(connection, customer, callback) {
+            var rounds = 10;
+            bcrypt.genSalt(function(err, salt) {
                 if (err) {
                     callback(err);
                 } else {
-                    callback(customer);
+                    callback(null, connection, customer, salt);
                 }
             });
         }
 
-        function pushMail(customer, callback){
-            //TODO: 메일 푸시하자
-            var result = {};
-            callback(result);
+        function generateHashPassword(connection, customer, salt, callback) {
+            bcrypt.hash(newPassword, salt, function(err, hashPassword) {
+                if (err) {
+                    callback(err);
+                } else {
+                    customer.hashPassword = hashPassword;
+                    callback(null, connection, customer);
+                }
+            });
         }
 
-        async.waterfall([getConnection, selectCustomer], function(err, result) {
+        function pushPassword(connection, customer, callback) {
+            connection.beginTransaction(function(err) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+
+
+                    //update hashpassword
+                    var update = "UPDATE customer " +
+                                 "SET customer_acc_pwd = ? " +
+                                 "WHERE customer_id = ?";
+                    connection.query(update, [customer.hashPassword, customer.id], function(err, result) {
+                        if (err) {
+                            connection.rollback();
+                            connection.release();
+                            callback(err);
+                        } else {
+                            //push mail
+                            var transporter = nodemailer.createTransport(sesTransport({
+                                "accessKeyId": sesConfig.key,
+                                "secretAccessKey": sesConfig.secret,
+                                "region": sesConfig.region
+                            }));
+
+                            var data = {
+                                "from": "113305ms@gmail.com",
+                                "to": customer.email,
+                                "subject": "DINER임시 비밀번호 발송 메일 입니다.",
+                                "text": "고객님의 임시 비밀번호는 " + newPassword + "입니다.",
+                                "html": "고객님의 임시 비밀번호는 <strong>" + newPassword + "</strong>입니다."
+                            };
+
+                            transporter.sendMail(data, function(err, info) {
+                                if (err) {
+                                    connection.rollback();
+                                    connection.release();
+                                    var err = new Error('비밀번호 재발급에 실패하였습니다.');
+                                    err.code = 'E0006a';
+                                    callback(err);
+                                } else {
+                                    connection.commit();
+                                    connection.release();
+                                    var result = {
+                                        "results": {
+                                            "message": "비밀번호 재발급이 정상적으로 처리되었습니다."
+                                        }
+                                    };
+                                    callback(null, result);
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        }
+
+        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, pushPassword], function(err, result) {
             if (err) {
                 next(err);
             } else {
