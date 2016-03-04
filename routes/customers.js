@@ -407,82 +407,164 @@ router.put('/me', isLoggedIn, function (req, res, next) {
     var password = req.body.password;
     var phone = req.body.customerPhone;
 
-
-    console.log('이름', name);
     function getConnection(callback) {
-        console.log('이름11', name);
         pool.getConnection(function (err, connection) {
             if (err) {
                 callback(err);
             } else {
-                console.log('이름111', name);
                 callback(null, connection);
             }
         });
     }
 
+    function getCustomerInfo (connection, callback) {
 
-    //function changeCustomerInfo (connection, callback) {
-    //    if (err) {
-    //        callback(err);
-    //    } else {
-    //        if (name === null) {
-    //                name = result.customerName;
-    //        } else if (phone === null) {
-    //            phone = result.customerPhone;
-    //        } else if (password === null) {
-    //            var err = new Error('비밀번호를 입력해주십시오');
-    //            err.code = "E0004a";
-    //            callback(err);
-    //        } else {
-    //            console.log('바디네임4',name);
-    //            callback(null, name, result, connection);
-    //        }
-    //
-    //    }
-    //}
+        console.log('회원아이디', customer.customerId);
 
-    function generateSalt(connection, callback) {
-        var rounds = 10;
-        bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
-            if (err) {
-                callback(err);
-            } else {
-                callback(null, salt, connection);
-            }
-        });
-    }
+        var sql = "SELECT convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as customer_name, " +
+                  "		convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as customer_phone, " +
+                  "customer_acc_pwd " +
+                  "FROM customer " +
+                  "WHERE customer_id = " + connection.escape(customer.customerId) ;
 
-
-    function generateHashPassword(salt, connection, callback) {
-        bcrypt.hash(password, salt, function (err, hashPassword) {
-            if (err) {
-                callback(err);
-            } else {
-                var password1 = hashPassword;
-                callback(null, connection, password1);
-            }
-        });
-    }
-
-
-        function updateCustomer(connection, password1, callback) {
-        var sql = "UPDATE customer " +
-                  "SET customer_name = aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
-                  "    customer_phone = aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
-                  "    customer_acc_pwd = " + connection.escape(password1) +
-                  "WHERE customer_id = " + connection.escape(customer.customerId);
         connection.query(sql, function (err, results) {
+            if (err) {
+                callback(err);
+            } else {
+                var oldInfo = {
+                    "oldname": results[0].customer_name,
+                    "oldphone": results[0].customer_phone,
+                    "password": results[0].customer_acc_pwd
+                };
+                console.log('리져트', oldInfo);
+
+                callback(null, oldInfo, connection);
+            }
+        });
+    }
+
+    // 업데이트 트랜잭션 !
+
+    function updateCustomerInfo (oldInfo, connection, callback) {
+
+        connection.beginTransaction(function (err) {
             if (err) {
                 connection.release();
                 callback(err);
             } else {
-                callback(null);
+                // 사용자 이름 업데이트
+                function updateCustomerName (cb1) {
+                    if(name === undefined) {
+                        cb1(null);
+                    } else {
+                        var sql = "UPDATE customer " +
+                            "SET customer_name = aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + "))  " +
+                            "WHERE customer_id = " + connection.escape(customer.customerId);
+
+                        connection.query(sql, function (err, result) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb1(err);
+                            } else {
+                                cb1(null);
+                            }
+                        });
+                    }
+                }
+
+                // 사용자 핸드폰번호 업데이트
+                function updateCustomerPhone (cb1) {
+                    if (phone === undefined) {
+                        cb1(null);
+                    } else {
+                        var sql = "UPDATE customer " +
+                            "SET customer_phone = aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + "))  " +
+                            "WHERE customer_id = " + connection.escape(customer.customerId);
+
+                        connection.query(sql, function (err, result) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb1(err);
+                            } else {
+                                cb1(null);
+                            }
+                        });
+                    }
+                }
+
+                // 사용자 비밀번호 업데이트
+                function updateCustomerPassword (cb1) {
+                    if (password === undefined) {
+                        cb1(null, oldInfo);
+                    } else {
+                        function generateSalt(cb2) {
+                            var rounds = 10;
+                            bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
+                                if (err) {
+                                    cb2(err);
+                                } else {
+                                    console.log('솔트', salt);
+                                    cb2(null, salt);
+                                }
+                            });
+                        }
+
+                        function generateHashPassword(salt, cb2) {
+                            bcrypt.hash(password, salt, function (err, hashPassword) {
+                                if (err) {
+                                    console.log('패스워드1', password);
+                                    cb2(err);
+                                } else {
+                                    var password1 = hashPassword;
+
+                                    console.log('해쉬패스워드', password1);
+                                    cb2(null, password1);
+                                }
+                            });
+                        }
+
+                        function updatePassword (password1, cb2) {
+                            var sql = "UPDATE customer " +
+                                "SET customer_acc_pwd = ? " +
+                                "WHERE customer_id = ?";
+
+                            connection.query(sql, [password1, customer.customerId], function (err, result) {
+                                if (err) {
+                                    connection.rollback();
+                                    connection.release();
+                                    cb2(err);
+                                } else {
+                                    connection.commit();
+                                    connection.release();
+                                    cb2(null);
+                                }
+                            });
+                        }
+
+                        async.waterfall([generateSalt, generateHashPassword, updatePassword], function (err) {
+                            if (err) {
+                                cb1(err);
+                            } else {
+                                cb1(null);
+                            }
+                        });
+                    }
+                }
+
+                async.waterfall([updateCustomerName, updateCustomerPhone, updateCustomerPassword], function (err) {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback(null);
+                    }
+                });
             }
         });
     }
 
-    async.waterfall([getConnection, generateSalt, generateHashPassword, updateCustomer], function (err) {
+    async.waterfall([getConnection, getCustomerInfo, updateCustomerInfo], function (err) {
         if (err) {
             var err = new Error('회원정보 변경에 실패하였습니다.');
             err.status = 401;
