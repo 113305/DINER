@@ -138,10 +138,22 @@ router.delete('/', isLoggedIn, function (req, res, next) {
         });
     }
 
-    //function updateCustomerState (connection, callback) {
-    //    var sql =
-    //}
-    ////
+    function updateCustomerState(connection, callback) {
+        var sql = "UPDATE customer " +
+                  "SET customer_state = 1 " +
+                  "WHERE customer_id = ?";
+
+        connection.query(sql, [customer.customerId], function (err, results) {
+            connection.release();
+            if (err) {
+                callback(err);
+            } else {
+                callback(null)
+            }
+        });
+    }
+
+    //
     ////function selectReservation (connection, callback) {
     ////    var sql = "SELECT reservation_id " +
     //              "FROM reservation " +
@@ -183,7 +195,7 @@ router.delete('/', isLoggedIn, function (req, res, next) {
     //    });
     //}
 
-    async.waterfall([getConnection, selectReservation, deleteReservation, deleteCustomer], function (err, result) {
+    async.waterfall([getConnection, updateCustomerState], function (err, result) {
         if (err) {
             var err = new Error('회원탈퇴에 실패하였습니다.');
             err.status = 401;
@@ -222,16 +234,16 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                   "FROM customer " +
                   "WHERE customer_id = ?";
 
-        connection.query(sql, [customer.id], function (err, result) {
+        connection.query(sql, [customer.customerId], function (err, result) {
             if (err) {
                 connection.release();
                 callback(err);
            } else {
                 result = {
                     "profile": {
-                        "customerEmail": customer.email,
-                        "customerName": customer.name,
-                        "customerPhone": customer.phone,
+                        "customerEmail": customer.customerEmail,
+                        "customerName": customer.customerName,
+                        "customerPhone": customer.customerPhone,
                         "showCount": result[0].show_count
                     },
                     "reservation": []
@@ -244,58 +256,102 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 
     function getReservation (connection, result, callback) {
         var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request, score "+
-                  "FROM reservation res join restaurant r on (res.restaurant_id = r.restaurant_id) "+
-                  "WHERE customer_id = ?";
+                  "FROM reservation res join restaurant r on (r.restaurant_id = res.restaurant_id) "+
+                  "WHERE customer_id = ? and reservation_state != 2";
 
-
-        connection.query(sql, [customer.id], function (err, results) {
+        connection.query(sql, [customer.customerId], function (err, results) {
             if(err) {
                 connection.release();
                 callback(err);
             } else {
-                async.eachSeries(results, function (element, cb1) {
-                    element.menu = [];
+                    async.eachSeries(results, function (element, cb1) {
+                        element.menu = [];
 
-                    var sql1 = "SELECT menu_name, quantity " +
-                               "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
-                               "WHERE reservation_id = ?";
+                        var sql1 = "SELECT menu_name, quantity " +
+                            "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+                            "WHERE reservation_id = ?";
 
-                    connection.query(sql1, [element.reservation_id], function (err, results1) {
-                        if (err) {
-                            connection.release();
-                            callback(err);
-                        } else {
-                            async.eachSeries(results1, function (menu, cb2) {
-                                element.menu.push({
-                                    "menuName": menu.menu_name,
-                                    "quantity": menu.quantity
-                                });
-                                cb2(null);
-                            }, function(err) {
-                                if(err){
-                                    cb2(err);
-                                } else {
-                                    result.reservation.push({
-                                        "restaurantId": element.restaurant_id,
-                                        "restaurantName": element.restaurant_name,
-                                        "dateTime": element.date_time,
-                                        "adultNumber": element.adult_number,
-                                        "childNumber": element.child_number,
-                                        "etcRequest": element.etc_request,
-                                        "menu": element.menu
+                        connection.query(sql1, [element.reservation_id], function (err, results1) {
+                            if (err) {
+                                connection.release();
+                                callback(err);
+                            } else {
+                                async.eachSeries(results1, function (menu, cb2) {
+                                    element.menu.push({
+                                        "menuName": menu.menu_name,
+                                        "quantity": menu.quantity
                                     });
-                                    cb1(null, result);
-                                }
-                            });
+                                    cb2(null);
+                                }, function(err) {
+                                    if(err){
+                                        cb2(err);
+                                    } else {
+                                        result.reservation.push({
+                                            "restaurantId": element.restaurant_id,
+                                            "restaurantName": element.restaurant_name,
+                                            "dateTime": element.date_time,
+                                            "adultNumber": element.adult_number,
+                                            "childNumber": element.child_number,
+                                            "etcRequest": element.etc_request,
+                                            "menu": element.menu
+                                        });
+                                        cb1(null, result);
+                                    }
+                                });
+                            }
+                        });
+                    }, function(err) {
+                        if(err){
+                            cb1(err);
+                        } else {
+                            console.log('리저트2', result);
+                            callback(null, connection, result);
                         }
                     });
-                }, function(err) {
-                    if(err){
-                        cb1(err);
-                    } else {
-                        callback(null, connection, result);
-                    }
-                });
+                //async.eachSeries(results, function (element, cb1) {
+                //    element.menu = [];
+                //
+                //    var sql1 = "SELECT menu_name, quantity " +
+                //               "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+                //               "WHERE reservation_id = ?";
+                //
+                //    connection.query(sql1, [element.reservation_id], function (err, results1) {
+                //        if (err) {
+                //            connection.release();
+                //            callback(err);
+                //        } else {
+                //            async.eachSeries(results1, function (menu, cb2) {
+                //                element.menu.push({
+                //                    "menuName": menu.menu_name,
+                //                    "quantity": menu.quantity
+                //                });
+                //                cb2(null);
+                //            }, function(err) {
+                //                if(err){
+                //                    cb2(err);
+                //                } else {
+                //                    result.reservation.push({
+                //                        "restaurantId": element.restaurant_id,
+                //                        "restaurantName": element.restaurant_name,
+                //                        "dateTime": element.date_time,
+                //                        "adultNumber": element.adult_number,
+                //                        "childNumber": element.child_number,
+                //                        "etcRequest": element.etc_request,
+                //                        "menu": element.menu
+                //                    });
+                //                    cb1(null, result);
+                //                }
+                //            });
+                //        }
+                //    });
+                //}, function(err) {
+                //    if(err){
+                //        cb1(err);
+                //    } else {
+                //        console.log('리저트2', result);
+                //        callback(null, connection, result);
+                //    }
+                //});
             }
         });
     }
@@ -304,10 +360,11 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
         async.eachSeries(result.reservation, function (item, cb) {
             var sql = "SELECT restaurant_photo_url " +
                       "FROM restaurant_photo " +
-                      "WHERE restaurant_id = ?";
+                      "WHERE restaurant_id = ? ";
 
-            connection.query(sql, [item.restaurant_id], function (err, results) {
+            connection.query(sql, [item.restaurantId], function (err, results) {
                if (err) {
+                   connection.release();
                    callback(err);
                } else {
                    item.photo = results[0].restaurant_photo_url;
@@ -346,19 +403,44 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 router.put('/me', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
-    var name = req.body.name;
+    var name = req.body.customerName;
     var password = req.body.password;
-    var phone = req.body.phone;
+    var phone = req.body.customerPhone;
 
+
+    console.log('이름', name);
     function getConnection(callback) {
+        console.log('이름11', name);
         pool.getConnection(function (err, connection) {
             if (err) {
                 callback(err);
             } else {
+                console.log('이름111', name);
                 callback(null, connection);
             }
         });
     }
+
+
+    //function changeCustomerInfo (connection, callback) {
+    //    if (err) {
+    //        callback(err);
+    //    } else {
+    //        if (name === null) {
+    //                name = result.customerName;
+    //        } else if (phone === null) {
+    //            phone = result.customerPhone;
+    //        } else if (password === null) {
+    //            var err = new Error('비밀번호를 입력해주십시오');
+    //            err.code = "E0004a";
+    //            callback(err);
+    //        } else {
+    //            console.log('바디네임4',name);
+    //            callback(null, name, result, connection);
+    //        }
+    //
+    //    }
+    //}
 
     function generateSalt(connection, callback) {
         var rounds = 10;
@@ -370,6 +452,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
             }
         });
     }
+
 
     function generateHashPassword(salt, connection, callback) {
         bcrypt.hash(password, salt, function (err, hashPassword) {
@@ -388,9 +471,8 @@ router.put('/me', isLoggedIn, function (req, res, next) {
                   "SET customer_name = aes_encrypt(" + connection.escape(name) + ", unhex(" + connection.escape(hexkey) + ")), " +
                   "    customer_phone = aes_encrypt(" + connection.escape(phone) + ", unhex(" + connection.escape(hexkey) + ")), " +
                   "    customer_acc_pwd = " + connection.escape(password1) +
-                  "WHERE customer_id = " + connection.escape(customer.id);
-        connection.query(sql, function (err, result) {
-
+                  "WHERE customer_id = " + connection.escape(customer.customerId);
+        connection.query(sql, function (err, results) {
             if (err) {
                 connection.release();
                 callback(err);
