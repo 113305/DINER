@@ -23,21 +23,46 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
     var customer = req.user;
 
     var restaurantId = req.params.restaurantId;
+    var adultNumber = req.body.adultNumber;
+    var childNumber = req.body.childNumber;
+    var etcRequest = req.body.etcRequest;
+    var orderLists = req.body.orderLists;
+
+
     var year = parseInt(req.body.year);
     var month = parseInt(req.body.month) - 1;
     var day = parseInt(req.body.day);
     var hour = parseInt(req.body.hour);
     var minute = parseInt(req.body.minute);
 
+    //원래 데이트타임
     var m = moment({"year": year, "month": month, "day": day,
         "hour": hour, "minute": minute, "second": "00"}).tz('Asia/Seoul');
 
     var dateTime = m.format("YYYY-MM-DD HH:mm:00");
 
-    var adultNumber = req.body.adultNumber;
-    var childNumber = req.body.childNumber;
-    var etcRequest = req.body.etcRequest;
-    var orderLists = req.body.orderLists;
+    //60분전 데이트타임
+    var hour2 = hour -1;
+    var m2 = moment({"year": year, "month": month, "day": day,
+        "hour": hour2, "minute": minute, "second": "00"}).tz('Asia/Seoul');
+
+    var before_60m = m2.format("YYYY-MM-DD HH:mm:00");
+
+    var minute2 = minute - 35;
+    var minute3 = 60 - (35 - minute);
+
+    //35분전
+    if (minute >= 35) {  //예약 분이 35분보다 클때
+        var m3 = moment({"year": year, "month": month, "day": day,
+            "hour": hour, "minute": minute2, "second": "00"}).tz('Asia/Seoul');
+
+        var before_35m = m3.format("YYYY-MM-DD HH:mm:00");
+    } else {
+        var m3 = moment({"year": year, "month": month, "day": day,
+            "hour": hour2, "minute": minute3, "second": "00"}).tz('Asia/Seoul');
+
+        var before_35m = m3.format("YYYY-MM-DD HH:mm:00");
+    }
 
     //console.log('메뉴이름', menuName);
     function getConnection(callback) {
@@ -82,11 +107,10 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
                 connection.release();
                 callback(err);
             } else {
-
                 function insertReservationTable (cb1) {
-                    var sql = "INSERT INTO reservation(customer_id, restaurant_id, no_show_pro, date_time, adult_number, child_number, etc_request) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
-                    connection.query(sql, [customer.customerId, restaurantId, noShowPro, dateTime, adultNumber, childNumber, etcRequest], function (err, result) {
+                    var sql = "INSERT INTO reservation(customer_id, restaurant_id, no_show_pro, date_time, before_60m, before_35m, adult_number, child_number, etc_request) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    connection.query(sql, [customer.customerId, restaurantId, noShowPro, dateTime, before_60m, before_35m, adultNumber, childNumber, etcRequest], function (err, result) {
                         if (err) {
                             connection.rollback();
                             connection.release();
@@ -97,7 +121,6 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
                         }
                     })
                 }
-
 
                 function insertMenuReservation (cb1) {
 
@@ -136,7 +159,6 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
                                     cb3(null);
                                 }
                             })
-
                         }
 
                         async.waterfall([selectMenuId, insertMenuReserveTable], function (err) {
@@ -150,9 +172,6 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
                     }, function (err) {
                         cb1(err);
                     });
-
-
-
                 }
 
                 async.series([insertReservationTable, insertMenuReservation], function (err) {
@@ -164,9 +183,6 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
                         callback(null);
                     }
                 });
-
-
-
             }
         });
     }
@@ -250,7 +266,6 @@ router.get('/', isLoggedIn, function(req, res, next) {
         });
     }
 
-
     async.waterfall([getConnection, selectRestaurantId, selectReservationId], function(err, reservation) {
        if (err) {
            next(err);
@@ -268,8 +283,6 @@ router.get('/', isLoggedIn, function(req, res, next) {
     });
 
 });
-
-
 
 router.route('/:reservationId')
     //show 확인하기 (check) (/reservations/:reservationId HTTP POST)
@@ -374,6 +387,9 @@ router.route('/:reservationId')
 
     // TODO: 예약 변경/취소 (/reservations/:reservationId HTTP PUT)
     .put (function(req, res, next) {
+
+        //예약 정보 변경사항 바디에 입력받기
+        // dateTime, adultNumber, childNumber, e등등..
 
     });
 
