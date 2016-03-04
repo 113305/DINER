@@ -1,6 +1,7 @@
 var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
+var moment = require('moment-timezone');
 var router = express.Router();
 
 
@@ -22,13 +23,23 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
     var customer = req.user;
 
     var restaurantId = req.params.restaurantId;
-    var dateTime = req.body.dateTime;
+    var year = parseInt(req.body.year);
+    var month = parseInt(req.body.month) - 1;
+    var day = parseInt(req.body.day);
+    var hour = parseInt(req.body.hour);
+    var minute = parseInt(req.body.minute);
+
+    var m = moment({"year": year, "month": month, "day": day,
+        "hour": hour, "minute": minute, "second": "00"}).tz('Asia/Seoul');
+
+    var dateTime = m.format("YYYY-MM-DD HH:mm:00");
+
     var adultNumber = req.body.adultNumber;
     var childNumber = req.body.childNumber;
     var etcRequest = req.body.etcRequest;
-    var quantity = req.body.quantity;
-    var menuName = req.body.menuName;
+    var orderLists = req.body.orderLists;
 
+    //console.log('메뉴이름', menuName);
     function getConnection(callback) {
         pool.getConnection(function(err, connection) {
            if (err) {
@@ -39,23 +50,128 @@ router.post('/:restaurantId/reserve', isLoggedIn, function(req, res, next) {
         });
     }
 
-    function insertReservation (connection, callback) {
-        var sql = "INSERT INTO reservation(customer_id, restaurant_id, date_time, adult_number, " +
-                  "            child_number, etc_request, " +
-                  "            reservation_state) " +
-                  "VALUES (?, ?, ?, ?, ?, ?, default)";
-        connection.query(sql, [customer.id, restaurantId, dateTime, adultNumber, childNumber, etcRequest], function (err, result) {
-            connection.release();
-            if (err) {
-                callback(err);
-            } else {
-                console.log('결과', result);
-                callback(null, result);
-            }
-        })
+    function getNoshowPro (connection, callback) {
+        var sql = "select floor(100 -((show_count / count(reservation_state))) * 100) as noShowPro "+
+        "from customer c join reservation r on (c.customer_id = r.customer_id)" +
+        "where c.customer_id = ? and reservation_state = 1";
+
+        connection.query(sql, [customer.customerId], function (err, results) {
+           if (err) {
+               connection.release();
+               callback(err);
+           } else {
+               var noShowPro = results[0].noShowPro;
+               console.log('노쇼확률', noShowPro);
+               callback(null, connection, noShowPro);
+           }
+        });
     }
 
-    async.waterfall([getConnection, insertReservation], function(err, result) {
+    function getDateTime (connection, noShowPro, callback) {
+        var sql = "SELECT date_time " +
+                  "FROM reservation " +
+                  "WHERE reservation_id = ?;"
+    }
+
+
+    function insertReservation (connection, noShowPro, callback) {
+        console.log('노쇼확률', noShowPro);
+        var reservationId = 0;
+        connection.beginTransaction(function (err) {
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
+
+                function insertReservationTable (cb1) {
+                    var sql = "INSERT INTO reservation(customer_id, restaurant_id, no_show_pro, date_time, adult_number, child_number, etc_request) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                    connection.query(sql, [customer.customerId, restaurantId, noShowPro, dateTime, adultNumber, childNumber, etcRequest], function (err, result) {
+                        if (err) {
+                            connection.rollback();
+                            connection.release();
+                            cb1(err);
+                        } else {
+                            reservationId = result.insertId;
+                            cb1(null);
+                        }
+                    })
+                }
+
+
+                function insertMenuReservation (cb1) {
+
+                    async.eachSeries(orderLists, function (orderList, cb2) {
+                        var order = orderList.split(",");
+
+                        var menuName = order[0];
+                        var quantity = order[1];
+
+                        function selectMenuId (cb3) {
+                            var sql = "select menu_id " +
+                                "from menu "+
+                                "where menu_name = ?";
+                            connection.query(sql, [menuName], function (err, results) {
+                                if (err) {
+                                    connection.release();
+                                    cb3(err);
+                                } else {
+                                    var menuId = results[0].menu_id;
+                                    console.log('메뉴아이디', menuId);
+                                    cb3(null, menuId);
+                                }
+                            });
+                        }
+
+                        function insertMenuReserveTable (menuId, cb3) {
+                            console.log('메뉴아이디', menuId);
+                            var sql = "INSERT INTO menu_reservation (menu_id, reservation_id, quantity) " +
+                                "VALUES (?, ?, ?)";
+                            connection.query(sql, [menuId, reservationId, quantity], function (err, result) {
+                                if (err) {
+                                    connection.rollback();
+                                    connection.release();
+                                    cb3(err);
+                                } else {
+                                    cb3(null);
+                                }
+                            })
+
+                        }
+
+                        async.waterfall([selectMenuId, insertMenuReserveTable], function (err) {
+                            if (err) {
+                                cb2(err);
+                            } else {
+                                cb2(null);
+                            }
+                        });
+
+                    }, function (err) {
+                        cb1(err);
+                    });
+
+
+
+                }
+
+                async.series([insertReservationTable, insertMenuReservation], function (err) {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        connection.commit();
+                        connection.release();
+                        callback(null);
+                    }
+                });
+
+
+
+            }
+        });
+    }
+
+    async.waterfall([getConnection, getNoshowPro, insertReservation], function(err) {
        if (err) {
            var err = new Error('예약에 실패하였습니다.');
            err.code = "E0013";
