@@ -24,13 +24,6 @@ router.post('/', function (req, res, next) {
         var phone = req.body.customerPhone;
         var email = req.body.customerEmail;
 
-        function nullCheck (callback) {
-            if (name === undefined || password === undefined || phone === undefined || email === undefined) {
-                callback(err);
-            } else {
-                callback(null);
-            }
-        }
 
         function getConnection(callback) {
             pool.getConnection(function (err, connection) {
@@ -107,7 +100,7 @@ router.post('/', function (req, res, next) {
             });
         }
 
-        async.waterfall([nullCheck, getConnection, selectCustomer, generateSalt, generateHashPassword, insertCustomer], function (err, result) {
+        async.waterfall([getConnection, selectCustomer, generateSalt, generateHashPassword, insertCustomer], function (err, result) {
             if (err) {
                 var err = new Error('회원가입에 실패하였습니다.');
                 err.status = 401;
