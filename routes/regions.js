@@ -53,7 +53,7 @@ router.get('/', function (req, res, next) {
 
 router.get('/:regionId', function (req, res, next) {
     var regionId = req.params.regionId;
-    var restaurantName = req.query.name;
+    var restaurantName = req.query.restaurantName;
 
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
@@ -67,18 +67,18 @@ router.get('/:regionId', function (req, res, next) {
 
     function selectRestaurant(connection, callback) {
 
-        if (req.query.name === undefined) {  // 쿼리 없을때 (구)전체 조회
+        if (req.query.restaurantName === undefined) {  // 쿼리 없을때 (구)전체 조회
             var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
                          "       reward_photo_url, reward_name, reward_info, " +
                          "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
-                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class " +
                          "FROM restaurant " +
                          "WHERE region_id = ?";
         } else {  // 쿼리 있을때 (구에서) 이름 조회 
             var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
                          "       reward_photo_url, reward_name, reward_info, " +
                          "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
-                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class, price_range " +
+                         "       restaurant_phone, restaurant_info, dong_info, restaurant_class " +
                          "FROM restaurant " +
                          "WHERE region_id = ? and restaurant_name = ?";
         }
@@ -101,7 +101,7 @@ router.get('/:regionId', function (req, res, next) {
     function selectRestaurantDetails(connection, results, callback) {
         var idx = 0;
         async.eachSeries(results, function (item, cb) {
-            var photo_select = "SELECT restaurant_photo_url as url " +
+            var photo_select = "SELECT restaurant_photo_url " +
                                "FROM restaurant_photo " +
                                "WHERE restaurant_id = ?";
             var menu_select = "SELECT m.menu_class_id, menu_class_name, menu_name, menu_photo_url, price, main_ingredient " +
@@ -152,31 +152,31 @@ router.get('/:regionId', function (req, res, next) {
 
         async.eachSeries(results, function (item, cb) {
             var restaurant_element = {
-                "list_restaurant": {
-                    "restaurant_name": item.restaurant_name,
-                    "dong_info": item.dong_info,
-                    "restaurant_calss": item.restaurant_class
+                "listRestaurant": {
+                    "restaurantName": item.restaurant_name,
+                    "dongInfo": item.dong_info,
+                    "restaurantCalss": item.restaurant_class
                 },
-                "detail_restaurant": {
-                    "restaurant_name": item.restaurant_name,
+                "detailRestaurant": {
+                    "restaurantName": item.restaurant_name,
                     "address": item.address,
-                    "website_url": item.website_url,
-                    "price_range": item.price_range,
-                    "reward_photo_url": item.reward_photo_url,
-                    "reward_info": item.reward_info,
-                    "reward_name": item.reward_name,
-                    "take_out": item.take_out,
+                    "websiteUrl": item.website_url,
+                    "rewardPhotoUrl": item.reward_photo_url,
+                    "rewardInfo": item.reward_info,
+                    "rewardName": item.reward_name,
+                    "takeOut": item.take_out,
                     "parking": item.parking,
                     "smoking": item.smoking,
-                    "break_time": item.break_time,
-                    "avg_score": item.avg_score,
-                    "restaurant_info": item.restaurant_info,
-                    "restaurant_photo_url": item.restaurant_photo_url,
+                    "breakTime": item.break_time,
+                    "avgScore": item.avg_score,
+                    "restaurantInfo": item.restaurant_info,
+                    "restaurantPhotoUrl": item.restaurant_photo_url,
                     "menu": item.menu
                 }
 
             };
-            restaurant_element.list_restaurant.restaurant_photo_url = restaurant_element.detail_restaurant.restaurant_photo_url[0];
+            console.log('메인사진!!!', restaurant_element.listRestaurant.restaurantPhotoUrl);
+            restaurant_element.listRestaurant.restaurantPhotoUrl = restaurant_element.detailRestaurant.restaurantPhotoUrl[0];
             restaurantList.push(restaurant_element);
             cb(null);
         }, function (err) {
