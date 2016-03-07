@@ -7,7 +7,7 @@ var router = express.Router();
 
 router.get('/', function (req, res, next) {
 
-    var restaurantName = req.query.name;
+    var restaurantName = req.query.restautantName;
 
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
@@ -29,6 +29,7 @@ router.get('/', function (req, res, next) {
             "WHERE restaurant_name = ?";
         connection.query(select, [restaurantName], function (err, results) {
             if (err) {
+                connection.release();
                 callback(err);
             } else {
                 console.log(results + "12312");
@@ -52,7 +53,7 @@ router.get('/', function (req, res, next) {
                     if (err) {
                         cb2(err);
                     } else {
-                        results[idx].restaurant_photo_url = restaurant_photo_results;
+                        results[idx].restaurantPhotoUrl = restaurant_photo_results;
                         console.log(restaurant_photo_results);
                         cb2(null);
                     }
@@ -91,33 +92,32 @@ router.get('/', function (req, res, next) {
 
         async.eachSeries(results, function (item, cb) {
             var restaurant_element = {
-                "list_restaurant": {
-                    "restaurant_name": item.restaurant_name,
+                "listRestaurant": {
+                    "restaurantName": item.restaurant_name,
                     //"restaurant_photo_url": item.restarant_photo_url,
-                    "dong_info": item.dong_info,
-                    "restaurant_calss": item.restaurant_class
+                    "dongInfo": item.dong_info,
+                    "restaurantCalss": item.restaurant_class
                 },
-                "detail_restaurant": {
-                    "restaurant_name": item.restaurant_name,
+                "detailRestaurant": {
+                    "restaurantName": item.restaurant_name,
                     "address": item.address,
-                    "website_url": item.website_url,
-                    "price_range": item.price_range,
-                    "restaurant_calss": item.restaurant_class,
-                    "reward_photo_url": item.reward_photo_url,
-                    "reward_info": item.reward_info,
-                    "reward_name": item.reward_name,
-                    "take_out": item.take_out,
+                    "websiteUrl": item.website_url,
+                    "restaurantCalss": item.restaurant_class,
+                    "rewardPhotoUrl": item.reward_photo_url,
+                    "rewardInfo": item.reward_info,
+                    "rewardName": item.reward_name,
+                    "takeOut": item.take_out,
                     "parking": item.parking,
                     "smoking": item.smoking,
-                    "break_time": item.break_time,
-                    "avg_score": item.avg_score,
-                    "restaurant_info": item.restaurant_info,
-                    "restaurant_photo_url": item.restaurant_photo_url,
+                    "breakTime": item.break_time,
+                    "avgScore": item.avg_score,
+                    "restaurantInfo": item.restaurant_info,
+                    "restaurantPhotoUrl": item.restaurant_photo_url,
                     "menu": item.menu
 
                 }
             };
-            restaurant_element.list_restaurant.restaurant_photo_url = restaurant_element.detail_restaurant.restaurant_photo_url[0];
+            restaurant_element.listRestaurant.restaurantPhotoUrl = restaurant_element.detailRestaurant.restaurantPhotoUrl[0];
             restaurantList.push(restaurant_element);
             cb(null);
         }, function (err) {
