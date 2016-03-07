@@ -435,7 +435,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
                 var oldInfo = {
                     "oldname": results[0].customer_name,
                     "oldphone": results[0].customer_phone,
-                    "password": results[0].customer_acc_pwd
+                    "oldpassword": results[0].customer_acc_pwd
                 };
                 console.log('리져트', oldInfo);
 
@@ -455,7 +455,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
             } else {
                 // 사용자 이름 업데이트
                 function updateCustomerName (cb1) {
-                    if(name === undefined) {
+                    if(name === oldInfo.oldname) {
                         cb1(null);
                     } else {
                         var sql = "UPDATE customer " +
@@ -476,7 +476,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
                 // 사용자 핸드폰번호 업데이트
                 function updateCustomerPhone (cb1) {
-                    if (phone === undefined) {
+                    if (phone === oldInfo.oldphone) {
                         cb1(null);
                     } else {
                         var sql = "UPDATE customer " +
@@ -497,7 +497,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
                 // 사용자 비밀번호 업데이트
                 function updateCustomerPassword (cb1) {
-                    if (password === undefined) {
+                    if (password === oldInfo.oldpassword) {
                         cb1(null, oldInfo);
                     } else {
                         function generateSalt(cb2) {
