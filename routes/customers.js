@@ -154,48 +154,6 @@ router.delete('/', isLoggedIn, function (req, res, next) {
         });
     }
 
-    //
-    ////function selectReservation (connection, callback) {
-    ////    var sql = "SELECT reservation_id " +
-    //              "FROM reservation " +
-    //              "WHERE customer_id = ?";
-    //    connection.query(sql, [customer.id], function (err, result) {
-    //       if (err) {
-    //           callback(err);
-    //       } else {
-    //           callback(null, connection, result);
-    //       }
-    //    });
-    //}
-    //
-    //function deleteReservation (connection, result, callback) {
-    //    var sql = "DELETE " +
-    //              "FROM reservation " +
-    //              "WHERE reservation_id in (?)";
-    //
-    //    connection.query(sql, [result], function (err, result) {
-    //       if (err) {
-    //           callback(err);
-    //       } else {
-    //           callback(null, connection, result)
-    //       }
-    //    });
-    //}
-    //
-    //function deleteCustomer(connection, result, callback) {
-    //    var sql2 = "DELETE " +
-    //        "FROM customer " +
-    //        "WHERE customer_id = ?";
-    //    connection.query(sql2, [customer.id], function (err, result) {
-    //        connection.release();
-    //        if (err) {
-    //            callback(err);
-    //        } else {
-    //            callback(null);
-    //        }
-    //    });
-    //}
-
     async.waterfall([getConnection, updateCustomerState], function (err, result) {
         if (err) {
             var err = new Error('회원탈퇴에 실패하였습니다.');
@@ -309,50 +267,6 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                             callback(null, connection, result);
                         }
                     });
-                //async.eachSeries(results, function (element, cb1) {
-                //    element.menu = [];
-                //
-                //    var sql1 = "SELECT menu_name, quantity " +
-                //               "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
-                //               "WHERE reservation_id = ?";
-                //
-                //    connection.query(sql1, [element.reservation_id], function (err, results1) {
-                //        if (err) {
-                //            connection.release();
-                //            callback(err);
-                //        } else {
-                //            async.eachSeries(results1, function (menu, cb2) {
-                //                element.menu.push({
-                //                    "menuName": menu.menu_name,
-                //                    "quantity": menu.quantity
-                //                });
-                //                cb2(null);
-                //            }, function(err) {
-                //                if(err){
-                //                    cb2(err);
-                //                } else {
-                //                    result.reservation.push({
-                //                        "restaurantId": element.restaurant_id,
-                //                        "restaurantName": element.restaurant_name,
-                //                        "dateTime": element.date_time,
-                //                        "adultNumber": element.adult_number,
-                //                        "childNumber": element.child_number,
-                //                        "etcRequest": element.etc_request,
-                //                        "menu": element.menu
-                //                    });
-                //                    cb1(null, result);
-                //                }
-                //            });
-                //        }
-                //    });
-                //}, function(err) {
-                //    if(err){
-                //        cb1(err);
-                //    } else {
-                //        console.log('리저트2', result);
-                //        callback(null, connection, result);
-                //    }
-                //});
             }
         });
     }
@@ -476,7 +390,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
                 // 사용자 핸드폰번호 업데이트
                 function updateCustomerPhone (cb1) {
-                    if (phone === oldInfo.oldphone) {
+                    if (phone === oldInfo.oldphone || phone === undefined ) {   // 안드로이드에서 null값 넣어주기로 했으니까 undefined 일땐 체크 안함
                         cb1(null);
                     } else {
                         var sql = "UPDATE customer " +
