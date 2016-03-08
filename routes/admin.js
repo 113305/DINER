@@ -84,7 +84,9 @@ router.get('/:reservationId', function(req, res, next) {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    connection.query(insert, [err, jobId], function(err, result) {
+                                    var content = "push error";
+
+                                    connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
                                             console.log(jobName + ' error result_log 처리 실패');
@@ -96,7 +98,9 @@ router.get('/:reservationId', function(req, res, next) {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    connection.query(insert, [result, jobId], function(err, result) {
+                                    var content = "push success";
+
+                                    connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
                                             console.log(jobName + ' success result_log 처리 실패');
@@ -240,7 +244,9 @@ router.get('/:reservationId', function(req, res, next) {
                                                         var insert = "INSERT INTO result_log (content, job_id) " +
                                                             "VALUES (?, ?)";
 
-                                                        connection.query(insert, [err, jobId], function(err, result) {
+                                                        var content = "push error";
+
+                                                        connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
                                                                 console.log(jobName + ' error result_log 처리 실패');
@@ -252,7 +258,9 @@ router.get('/:reservationId', function(req, res, next) {
                                                         var insert = "INSERT INTO result_log (content, job_id) " +
                                                             "VALUES (?, ?)";
 
-                                                        connection.query(insert, [result, jobId], function(err, result) {
+                                                        var content = "push success";
+
+                                                        connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
                                                                 console.log(jobName + ' success result_log 처리 실패');
