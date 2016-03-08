@@ -155,7 +155,7 @@ router.delete('/', isLoggedIn, function (req, res, next) {
         if (err) {
             var err = new Error('회원탈퇴에 실패하였습니다.');
             err.status = 401;
-            err.code = "E00011b";
+            err.code = "E00014";
             next(err);
         } else {
             var results = {
