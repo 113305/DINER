@@ -49,7 +49,7 @@ router.get('/', function (req, res, next) {
 });
 
 
-// TODO: 레스토랑 목록보기 (/regions/:regionId HTTP GET)
+// 레스토랑 목록보기 (/regions/:regionId HTTP GET)
 
 router.get('/:regionId', function (req, res, next) {
     var regionId = req.params.regionId;
@@ -68,7 +68,8 @@ router.get('/:regionId', function (req, res, next) {
     function selectRestaurant(connection, callback) {
 
         if (req.query.restaurantName === undefined) {  // 쿼리 없을때 (구)전체 조회
-            var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
+            var select = "SELECT restaurant_id , restaurant_name, " +
+                         "       address, website_url, business_hours, " +
                          "       reward_photo_url, reward_name, reward_info, " +
                          "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
                          "       restaurant_phone, restaurant_info, dong_info, restaurant_class " +
@@ -101,28 +102,30 @@ router.get('/:regionId', function (req, res, next) {
     function selectRestaurantDetails(connection, results, callback) {
         var idx = 0;
         async.eachSeries(results, function (item, cb) {
-            var photo_select = "SELECT restaurant_photo_url " +
+            var photo_select = "SELECT restaurant_photo_url as restaurantPhotoUrl " +
                                "FROM restaurant_photo " +
                                "WHERE restaurant_id = ?";
-            var menu_select = "SELECT m.menu_class_id, menu_class_name, menu_name, menu_photo_url, price, main_ingredient " +
+            var menu_select = "SELECT m.menu_class_id as menuClassId, menu_class_name as menuClassName, " +
+                              "       menu_name as menuName, menu_photo_url as menuPhotoUrl, price, " +
+                              "       main_ingredient as mainIngredient " +
                               "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
                               "WHERE restaurant_id = ?";
             async.series([function (cb2) {
-                connection.query(photo_select, item.restaurant_id, function (err, restaurant_photo_results) {
+                connection.query(photo_select, item.restaurant_id, function (err, photoResults) {
                     if (err) {
                         cb2(err);
                     } else {
-                        results[idx].restaurant_photo_url = restaurant_photo_results;
-                        console.log(restaurant_photo_results);
+                        results[idx].restaurant_photo_url = photoResults;
                         cb2(null);
                     }
                 });
             }, function (cb2) {
-                connection.query(menu_select, item.restaurant_id, function (err, restaurant_menu_results) {
+                connection.query(menu_select, item.restaurant_id, function (err, menuResults) {
                     if (err) {
                         cb2(err);
                     } else {
-                        results[idx].menu = restaurant_menu_results;
+                        //results[idx].menu = restaurant_menu_results;
+                        results[idx].menu = menuResults;
                         cb2(null);
                     }
                 });
@@ -158,8 +161,10 @@ router.get('/:regionId', function (req, res, next) {
                     "restaurantCalss": item.restaurant_class
                 },
                 "detailRestaurant": {
+                    "restaurantId": item.restaurant_id,
                     "restaurantName": item.restaurant_name,
                     "address": item.address,
+                    "businessHours": item.business_hours,
                     "websiteUrl": item.website_url,
                     "rewardPhotoUrl": item.reward_photo_url,
                     "rewardInfo": item.reward_info,
@@ -175,7 +180,6 @@ router.get('/:regionId', function (req, res, next) {
                 }
 
             };
-            console.log('메인사진!!!', restaurant_element.listRestaurant.restaurantPhotoUrl);
             restaurant_element.listRestaurant.restaurantPhotoUrl = restaurant_element.detailRestaurant.restaurantPhotoUrl[0];
             restaurantList.push(restaurant_element);
             cb(null);
@@ -183,7 +187,6 @@ router.get('/:regionId', function (req, res, next) {
             if (err) {
                 callback(err);
             } else {
-                console.log(restaurantList);
                 var result = {
                     "data": restaurantList
                 };
