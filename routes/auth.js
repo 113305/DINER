@@ -109,7 +109,7 @@ router.post('/facebook/token', function(req, res, next) {
 
 router.post('/updatepassword', function(req, res, next) {
     if (req.secure) {
-        var customerEmail = req.body.email;
+        var customerEmail = req.body.customerEmail;
         //create random password
         var newPassword = randomstring.generate({
             length: 10,
@@ -212,7 +212,7 @@ router.post('/updatepassword', function(req, res, next) {
                                     connection.rollback();
                                     connection.release();
                                     var err = new Error('비밀번호 재발급에 실패하였습니다.');
-                                    err.code = 'E0006a';
+                                    err.code = 'E0006b';
                                     callback(err);
                                 } else {
                                     connection.commit();
