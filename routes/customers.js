@@ -16,7 +16,7 @@ function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
     }
 }
 
-// TODO: 회원가입하기(/customers HTTPS POST)
+// 회원가입하기(/customers HTTPS POST)
 router.post('/', function (req, res, next) {
     if (req.secure) {
         var name = req.body.customerName;
@@ -57,25 +57,23 @@ router.post('/', function (req, res, next) {
             });
         }
 
-        //TODO: 1. salt generation (원본 암호를 암호화)
+        // salt generation (원본 암호를 암호화)
         function generateSalt(connection, callback) {
             var rounds = 10;
             bcrypt.genSalt(rounds, function (err, salt) {  //솔트 문자열 생성하는데 default값이 10
                 if (err) {
                     callback(err);
                 } else {
-                    console.log('솔트문자열', salt);
                     callback(null, salt, connection);
                 }
             });
         }
-        //TODO: 2. hash password generation (암호화된 원본암호를 해쉬함수를 이용해서 암호화)
+        // hash password generation (암호화된 원본암호를 해쉬함수를 이용해서 암호화)
         function generateHashPassword(salt, connection, callback) {
             bcrypt.hash(password, salt, function (err, hashPassword) {
                 if (err) {
                     callback(err);
                 } else {
-                    console.log('해쉬암호', hashPassword);
                     callback(null, hashPassword, connection);
                 }
             });
@@ -94,7 +92,6 @@ router.post('/', function (req, res, next) {
                 if (err) {
                     callback(err);
                 } else {
-                    console.log('회원가입결과', result);
                     callback(null);
                 }
             });
@@ -122,7 +119,7 @@ router.post('/', function (req, res, next) {
     }
 });
 
-// TODO: 회원 탈퇴하기 (/customers HTTP DELETE)
+// 회원 탈퇴하기 (/customers HTTP DELETE)
 // 바로 삭제하면 안되니까
 // 상태를 만들어서 active: 0, 탈퇴요청: 1 (로그인안되게) 이런식으루
 
@@ -172,7 +169,7 @@ router.delete('/', isLoggedIn, function (req, res, next) {
 
 });
 
-// TODO: 회원정보 확인하기(/customers/me HTTPS GET) showcount로 noshow카운트 계산하기 (전체 완료 예약건수 - showcount)
+// 회원정보 확인하기(/customers/me HTTPS GET) showcount로 noshow카운트 계산하기 (전체 완료 예약건수 - showcount)
 router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 
     var customer = req.user;  // 세션에저장된 user정보 id, name, phone, email, password, facebookEnail, facebookName
@@ -207,7 +204,6 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                     },
                     "reservation": []
                 };
-                console.log('리절트1', result);
                 callback(null, connection, result);
             }
         });
@@ -263,7 +259,6 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                         if(err){
                             cb1(err);
                         } else {
-                            console.log('리저트2', result);
                             callback(null, connection, result);
                         }
                     });
@@ -314,7 +309,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
 });
 
 
-//// TODO: 회원정보 변경하기 (/customers/me HTTPS PUT)  경우의수가 너무 많은데?? 바꿀때마다 다 바꾸긴 좀..
+// 회원정보 변경하기 (/customers/me HTTPS PUT)
 router.put('/me', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
@@ -334,8 +329,6 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
     function getCustomerInfo (connection, callback) {
 
-        console.log('회원아이디', customer.customerId);
-
         var sql = "SELECT convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as customer_name, " +
                   "		convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as customer_phone, " +
                   "customer_acc_pwd " +
@@ -351,7 +344,6 @@ router.put('/me', isLoggedIn, function (req, res, next) {
                     "oldphone": results[0].customer_phone,
                     "oldpassword": results[0].customer_acc_pwd
                 };
-                console.log('리져트', oldInfo);
 
                 callback(null, oldInfo, connection);
             }
@@ -420,7 +412,6 @@ router.put('/me', isLoggedIn, function (req, res, next) {
                                 if (err) {
                                     cb2(err);
                                 } else {
-                                    console.log('솔트', salt);
                                     cb2(null, salt);
                                 }
                             });
@@ -429,12 +420,9 @@ router.put('/me', isLoggedIn, function (req, res, next) {
                         function generateHashPassword(salt, cb2) {
                             bcrypt.hash(password, salt, function (err, hashPassword) {
                                 if (err) {
-                                    console.log('패스워드1', password);
                                     cb2(err);
                                 } else {
                                     var password1 = hashPassword;
-
-                                    console.log('해쉬패스워드', password1);
                                     cb2(null, password1);
                                 }
                             });
@@ -442,8 +430,8 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
                         function updatePassword (password1, cb2) {
                             var sql = "UPDATE customer " +
-                                "SET customer_acc_pwd = ? " +
-                                "WHERE customer_id = ?";
+                                      "SET customer_acc_pwd = ? " +
+                                      "WHERE customer_id = ?";
 
                             connection.query(sql, [password1, customer.customerId], function (err, result) {
                                 if (err) {
