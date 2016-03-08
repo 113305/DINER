@@ -158,11 +158,12 @@ router.get('/:regionId', function (req, res, next) {
                 "listRestaurant": {
                     "restaurantName": item.restaurant_name,
                     "dongInfo": item.dong_info,
-                    "restaurantCalss": item.restaurant_class
+                    "restaurantClass": item.restaurant_class
                 },
                 "detailRestaurant": {
                     "restaurantId": item.restaurant_id,
                     "restaurantName": item.restaurant_name,
+                    "restaurantPhone": item.restaurant_phone,
                     "address": item.address,
                     "businessHours": item.business_hours,
                     "websiteUrl": item.website_url,
