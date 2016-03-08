@@ -296,7 +296,6 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                    }
                };
            }
-
            res.json(result);
        }
     });
@@ -340,12 +339,17 @@ router.get('/', isLoggedIn, function(req, res, next) {
         });
     }
 
+
+
     function selectReservationId(connection, restaurantId, callback) {
         var select = "SELECT reservation_id " +
                      "FROM reservation " +
-                     "WHERE restaurant_id = ? and customer_id = ? and reservation_state=1 and date(date_time) = date(now())";
+                     "WHERE restaurant_id = ? and customer_id = ? and reservation_state = 1 and date(date_time) = ?";
 
-        connection.query(select, [restaurantId, customerId], function(err, results) {
+        var m = moment().tz('Asia/Seoul');
+        var todayDate = m.format("YYYY-MM-DD");
+
+        connection.query(select, [restaurantId, customerId, todayDate], function(err, results) {
             connection.release();
             if (err) {
                callback(err);
