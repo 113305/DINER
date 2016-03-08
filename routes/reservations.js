@@ -265,13 +265,13 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
        if (err) {
            if (reservationState === 0) {
                var err = new Error('예약에 실패하였습니다.');
-               err.code = "E0012a";
+               err.code = "E0013a";
            } else if (reservationState === 2) {
                var err = new Error('예약 취소에 실패하였습니다.');
-               err.code = "E0012b";
+               err.code = "E0013b";
            } else if (reservationState ===3) {
                var err = new Error('예약정보 변경에 실패하였습니다.');
-               err.code = "E0012c";
+               err.code = "E0013c";
            }
 
            next(err);
