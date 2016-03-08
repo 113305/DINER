@@ -1,8 +1,7 @@
-// 레스토랑 검색하기 (전체에서 이름  검색) (/restaurants HTTP get)
+// TODO: 레스토랑 검색하기 (전체에서 이름  검색) (/restaurants HTTP get)
 
 var express = require('express');
 var async = require('async');
-var bcrypt = require('bcrypt');
 var router = express.Router();
 
 router.get('/', function (req, res, next) {
@@ -20,17 +19,78 @@ router.get('/', function (req, res, next) {
     }
 
     function selectRestaurant(connection, callback) {
-        var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
-            "reward_photo_url, reward_name, reward_info, " +
-            "take_out, parking, smoking, break_time, discount_info, avg_score, " +
-            "restaurant_phone, restaurant_info, dong_info, restaurant_class " +
-            "FROM restaurant " +
-            "WHERE restaurant_name = ?";
+        var select = "SELECT r.restaurant_id as restaurant_id, restaurant_name, restaurant_photo_url, " +
+                     "       dong_info, restaurant_class " +
+                     "FROM restaurant r join restaurant_photo rp on (r.restaurant_id = rp.restaurant_id) " +
+                     "WHERE restaurant_name = ?";
         connection.query(select, [restaurantName], function (err, results) {
             if (err) {
                 connection.release();
                 callback(err);
             } else {
+
+                var result = {
+                    "results": {
+                        "restaurantId": results[0].restaurant_id,
+                        "restaurantName": results[0].restaurant_name,
+                        "dongInfo": results[0].dong_info,
+                        "restaurantClass": results[0].restaurant_class,
+                        "restaurantPhotoUrl": results[0].restaurant_photo_url
+                    }
+                };
+                callback(null, result);
+            }
+        });
+    }
+
+    async.waterfall([getConnection, selectRestaurant], function (err, result) {
+        if (err) {
+            var err = new Error('레스토랑 조회에 실패하였습니다.');
+            err.status = 401;
+            err.code = "E0012";
+            next(err);
+        } else {
+            var result = {
+                "results": {
+                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                    "data": result
+                }
+            };
+            res.json(result);
+        }
+    });
+});
+
+
+// TODO: 레스토랑 상세정보 보기 (/restaurants/:restaurantId/detail  HTTP GET)
+
+router.get('/:restaurantId', function (req, res, next) {
+
+    var restaurantId = req.params.restaurantId;
+
+    function getConnection(callback) {
+        pool.getConnection(function (err, connection) {
+            if (err) {
+                callback(err);
+            } else {
+                callback(null, connection);
+            }
+        });
+    }
+
+    function selectRestaurant(connection, callback) {
+        var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
+                     "       reward_photo_url, reward_name, reward_info, " +
+                     "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                     "       restaurant_phone, restaurant_info " +
+                     "FROM restaurant " +
+                     "WHERE restaurant_id = ?";
+        connection.query(select, [restaurantId], function (err, results) {
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
+                console.log('상세정보', results);
                 callback(null, connection, results);
             }
         });
@@ -90,16 +150,10 @@ router.get('/', function (req, res, next) {
 
         async.eachSeries(results, function (item, cb) {
             var restaurant_element = {
-                "listRestaurant": {
-                    "restaurantName": item.restaurant_name,
-                    //"restaurant_photo_url": item.restarant_photo_url,
-                    "dongInfo": item.dong_info,
-                    "restaurantClass": item.restaurant_class
-                },
-                "detailRestaurant": {
                     "restaurantId": item.restaurant_id,
                     "restaurantName": item.restaurant_name,
                     "address": item.address,
+                    "restaurantPhone": item.restaurant_phone,
                     "businessHours": item.business_hours,
                     "websiteUrl": item.website_url,
                     "restaurantClass": item.restaurant_class,
@@ -114,10 +168,7 @@ router.get('/', function (req, res, next) {
                     "restaurantInfo": item.restaurant_info,
                     "restaurantPhotoUrl": item.restaurant_photo_url,
                     "menu": item.menu
-
-                }
             };
-            restaurant_element.listRestaurant.restaurantPhotoUrl = restaurant_element.detailRestaurant.restaurantPhotoUrl[0];
             restaurantList.push(restaurant_element);
             cb(null);
         }, function (err) {
