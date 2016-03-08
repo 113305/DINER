@@ -116,11 +116,11 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             }
                         });
                     } else {
-                        // 취소일땐 상태만 2로 바꿔줌
+                        // 취소일땐                        상태만 2로 바꿔줌
                         var sql = "UPDATE reservation " +
-                                  "SET date_time = ?, before_60m = ?, before_35m = ?, adult_number= ?, child_number =?, etc_request =?, " +
-                                  "reservation_state = ? " +
-                                  "WHERE reservation_id = ?";
+                            "SET date_time = ?, before_60m = ?, before_35m = ?, adult_number= ?, child_number =?, etc_request =?, " +
+                            "reservation_state = ? " +
+                            "WHERE reservation_id = ?";
 
                         connection.query(sql, [dateTime, before_60m, before_35m, adultNumber, childNumber, etcRequest, reservationState, pReservationId], function (err, result) {
                             if (err) {
@@ -202,13 +202,13 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
 
                     } else {
                         var order = orderLists.split(",");
-                        var menuName = order[0];
-                        var quantity = order[1];
+                            var menuName = order[0];
+                            var quantity = order[1];
 
                         function selectMenuId (cb2) {
                             var sql = "SELECT menu_id " +
-                                      "FROM menu "+
-                                      "WHERE menu_name = ?";
+                                    "FROM menu "+
+                                    "WHERE menu_name = ?";
                             connection.query(sql, [menuName], function (err, results) {
                                 if (err) {
                                     connection.release();
@@ -239,7 +239,6 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             if (err) {
                                 cb1(err);
                             } else {
-                                res.json(result);
                                 cb1(null);
                             }
                         });
