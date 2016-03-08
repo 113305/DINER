@@ -147,7 +147,7 @@ router.get('/:reservationId', function(req, res, next) {
                 if (err) {
                     connection.release();
                     var err = new Error('신규 스케쥴 등록에 실패하였습니다.');
-                    err.code = 'E0020a';
+                    err.code = 'E0021a';
                     callback(err);
                 } else {
                     callback(null, connection, pushInfo);
@@ -195,7 +195,7 @@ router.get('/:reservationId', function(req, res, next) {
                 async.waterfall([getJobName, cancelJob], function(err, jobs) {
                     if (err) {
                         var err = new Error('스케쥴 취소에 실패하였습니다.');
-                        err.code = 'E0020b';
+                        err.code = 'E0021b';
                         innercallback(err);
                     } else {
                         innercallback(null, jobs);
@@ -321,7 +321,7 @@ router.get('/:reservationId', function(req, res, next) {
                                         connection.rollback();
                                         connection.release();
                                         var err = new Error('스케쥴 재등록에 실패하였습니다.');
-                                        err.code = 'E0020c';
+                                        err.code = 'E0021c';
                                         cb(err);
                                     } else {
                                         cb(null);
