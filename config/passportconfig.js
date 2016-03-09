@@ -126,9 +126,11 @@ var passportconfig = function(passport){
     passport.use('facebook-token', new FacebookTokenStrategy({
         "clientID": authConfig.facebook.appId,
         "clientSecret": authConfig.facebook.appSecret,
-        "profileFields": ["id", "displayName"]
-        }, function (accessToken, refreshToken, profile, done) {
-            console.log(profile);
+        "profileFields": ["id", "displayName"],
+        "passReqToCallback": true //req.body.registration_id
+        }, function (req, accessToken, refreshToken, profile, done) {
+            var registrationToken = req.body.registrationToken;
+
             function getConnection(callback) {
                 pool.getConnection(function(err, connection) {
                     if (err) {
@@ -153,9 +155,10 @@ var passportconfig = function(passport){
                     } else {
                         if (results.length === 0 ) {
 
-                            var insert = "INSERT INTO customer (facebook_id, facebook_token, facebook_name) " +
+                            var insert = "INSERT INTO customer (facebook_id, facebook_token, registration_token, facebook_name) " +
                                          "VALUES(" + connection.escape(profile.id) + ", " +
                                                      connection.escape(accessToken) + ", " +
+                                                     connection.escape(registrationToken) + ", " +
                                                      "aes_encrypt(" + connection.escape(profile.displayName) + ", unhex(" + connection.escape(hexkey) + "))" +
                                                 ")";
                             connection.query(insert, function(err, result) {
@@ -178,9 +181,9 @@ var passportconfig = function(passport){
                                 callback(null, customer);
                             } else {
                                 var update = "UPDATE customer " +
-                                             "SET	facebook_token = ? " +
+                                             "SET	facebook_token = ? and registration_token = ? " +
                                              "WHERE facebook_id = ?";
-                                connection.query(update, [accessToken, profile.id], function(err, result) {
+                                connection.query(update, [accessToken, registrationToken, profile.id], function(err, result) {
                                     connection.release();
                                     if (err) {
                                         callback(err);
