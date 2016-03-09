@@ -91,11 +91,11 @@ router.post('/facebook/token', function(req, res, next) {
                         next(err);
                     } else {
                         var result = {
-                          "results": {
+                            "results": {
                               "message": "페이스북 토큰 수신이 정상적으로 처리되었습니다."
-                          }
+                            }
                         };
-                        req.json(result);
+                        res.json(result);
                     }
                 });
             }
