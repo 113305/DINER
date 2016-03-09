@@ -1,7 +1,7 @@
 var authconfig = {
     "facebook": {
-        "appId": "1803925486501306",
-        "appSecret": "5a3c0f3e90d482dd87e4026e3ff79428"
+        "appId": "483112481878541",
+        "appSecret": "16af0520a822de7bd58b9767e849eb8e"
     }
 };
 
