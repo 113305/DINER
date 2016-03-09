@@ -10,7 +10,7 @@ var router = express.Router();
 //안드로이드 푸시하기
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
-    var sender = new gcm.Sender('YOUR_API_KEY_HERE');
+    var sender = new gcm.Sender('AIzaSyCI_NNBxxBfZ3VPSPMbYpxcgbFE8Sh537M');
 
     //1. 커넥션
     function getConnection(callback) {
@@ -89,8 +89,10 @@ router.get('/:reservationId', function(req, res, next) {
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
+                                            console.log(err);
                                             console.log(jobName + ' error result_log 처리 실패');
                                         } else {
+                                            console.log(result);
                                             console.log(jobName + ' error result_log 처리 완료');
                                         }
                                     });
@@ -103,8 +105,10 @@ router.get('/:reservationId', function(req, res, next) {
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
+                                            console.log(err);
                                             console.log(jobName + ' success result_log 처리 실패');
                                         } else {
+                                            console.log(result);
                                             console.log(jobName + ' success result_log 처리 완료');
                                         }
 
@@ -249,8 +253,10 @@ router.get('/:reservationId', function(req, res, next) {
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
+                                                                console.log(err);
                                                                 console.log(jobName + ' error result_log 처리 실패');
                                                             } else {
+                                                                console.log(result);
                                                                 console.log(jobName + ' error result_log 처리 완료');
                                                             }
                                                         });
@@ -263,8 +269,10 @@ router.get('/:reservationId', function(req, res, next) {
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
+                                                                console.log(err);
                                                                 console.log(jobName + ' success result_log 처리 실패');
                                                             } else {
+                                                                console.log(result);
                                                                 console.log(jobName + ' success result_log 처리 완료');
                                                             }
 
