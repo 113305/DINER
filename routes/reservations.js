@@ -386,7 +386,6 @@ router.get('/', isLoggedIn, function(req, res, next) {
 });
 
 
-//todo: avg_score넣기
 router.route('/:reservationId')
     //show 확인하기 (check) (/reservations/:reservationId HTTP POST)
     .post(isLoggedIn, function(req, res, next) {
