@@ -460,7 +460,7 @@ router.route('/:reservationId')
 
                     async.waterfall([updateScore, selectCustomerShowCount, updateShowCount], function(err, results) {
                         if (err) {
-                            var err = new Error('show 확인에 실패하였습니다.');
+                            var err = new Error('show count 업데이트에 실패하였습니다.');
                             err.code = 'E0008a';
                             callback(err);
                         } else {
