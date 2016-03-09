@@ -385,13 +385,15 @@ router.get('/', isLoggedIn, function(req, res, next) {
 
 });
 
+
+//todo: avg_score넣기
 router.route('/:reservationId')
     //show 확인하기 (check) (/reservations/:reservationId HTTP POST)
     .post(isLoggedIn, function(req, res, next) {
         var reservationId = req.params.reservationId;
         var score = req.body.score;
         var customer = req.user;
-        var newShowCount = 0;
+
         function getConnection(callback) {
             pool.getConnection(function(err, connection) {
                 if (err) {
@@ -435,18 +437,77 @@ router.route('/:reservationId')
                                 connection.release();
                                 cb(err);
                             } else {
-                                newShowCount = results[0].show_count + 1;
-                                cb(null);
+                                var newShowCount = results[0].show_count + 1;
+                                cb(null, newShowCount);
                             }
                         });
                     }
 
-                    function updateShowCount(cb) {
+                    function updateShowCount(newShowCount, cb) {
                         var update = "UPDATE customer " +
                             "SET	show_count = ? " +
                             "WHERE customer_id= ?";
 
                         connection.query(update, [newShowCount, customer.customerId], function(err , result) {
+                            if (err) {
+                                connection.rollback();
+                                cb(err);
+                            } else {
+                                cb(null);
+                            }
+                        });
+                    }
+
+
+                    async.waterfall([updateScore, selectCustomerShowCount, updateShowCount], function(err, results) {
+                        if (err) {
+                            var err = new Error('show 확인에 실패하였습니다.');
+                            err.code = 'E0008a';
+                            callback(err);
+                        } else {
+                            connection.commit();
+                            callback(null, connection);
+                        }
+                    });
+                }
+            });
+        }
+
+        function updateAvgScore(connection, callback) {
+            connection.beginTransaction(function(err) {
+                if (err) {
+                    connection.release();
+                    callback(err);
+                } else {
+                    function selectUpdateInfo(cb) {
+                        var select = "SELECT restaurant_id, sum(score) as score, count(score) as count " +
+                            "FROM reservation " +
+                            "WHERE reservation_state = 1 and restaurant_id = (SELECT restaurant_id " +
+                            "                                                 FROM reservation " +
+                            "                                                 WHERE reservation_id = ?)";
+
+                        connection.query(select, [reservationId], function(err, results) {
+                            if (err) {
+                                connection.rollback();
+                                connection.release();
+                                cb(err);
+                            } else {
+                                var newAvgScore = parseInt(results[0].score)/parseInt(results[0].count)
+                                var updateInfo = {
+                                    "restaurant_id": results[0].restaurant_id,
+                                    "newAvgScore": newAvgScore
+                                };
+                                cb(null, updateInfo)
+                            }
+                        });
+                    }
+
+                    function updateAvgScore(updateInfo, cb) {
+                        var update = "UPDATE restaurant " +
+                            "SET avg_score = ROUND(?, 2) " +
+                            "WHERE restaurant_id = ?";
+
+                        connection.query(update, [updateInfo.newAvgScore, updateInfo.restaurant_id], function(err, result) {
                             if (err) {
                                 connection.rollback();
                                 connection.release();
@@ -459,8 +520,10 @@ router.route('/:reservationId')
                         });
                     }
 
-                    async.series([updateScore, selectCustomerShowCount, updateShowCount], function(err, results) {
+                    async.waterfall([selectUpdateInfo, updateAvgScore], function(err, results) {
                         if (err) {
+                            var err = new Error('평균 별점 업데이트에 실패했습니다.');
+                            err.code = 'E0008b';
                             callback(err);
                         } else {
                             callback(null);
@@ -468,14 +531,13 @@ router.route('/:reservationId')
                     });
                 }
             });
+
         }
 
 
 
-        async.waterfall([getConnection, showCheck], function(err) {
+        async.waterfall([getConnection, showCheck, updateAvgScore], function(err) {
            if (err) {
-               var err = new Error('show 확인에 실패하였습니다.');
-               err.code = 'E0008';
                next(err);
            } else {
                var results = {
