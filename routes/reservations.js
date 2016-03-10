@@ -2,6 +2,7 @@ var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
 var moment = require('moment-timezone');
+var request = require('request');
 var router = express.Router();
 
 
@@ -197,7 +198,11 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             });
 
                         }, function (err) {
-                            cb1(err);
+                            if (err) {
+                                cb1(err);
+                            } else {
+                                cb1(null, reservationId);
+                            }
                         });
 
                     } else {
@@ -239,7 +244,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             if (err) {
                                 cb1(err);
                             } else {
-                                cb1(null);
+                                cb1(null, reservationId);
                             }
                         });
 
@@ -247,13 +252,13 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                     }
                 }
 
-                async.waterfall([updateReservationTable, insertMenuReservation], function (err) {
+                async.waterfall([updateReservationTable, insertMenuReservation], function (err, reservationId) {
                     if (err) {
                         callback(err);
                     } else {
                         connection.commit();
                         connection.release();
-                        callback(null);
+                        callback(null, reservationId);
                     }
                 });
             }
@@ -261,7 +266,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
         });
     }
 
-    async.waterfall([getConnection, getNoshowPro, insertReservation], function(err) {
+    async.waterfall([getConnection, getNoshowPro, insertReservation], function(err, reservationId) {
        if (err) {
            if (reservationState === 0) {
                var err = new Error('예약에 실패하였습니다.');
@@ -295,7 +300,14 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                    }
                };
            }
-           res.json(result);
+
+           var url = 'http://localhost/admin/' + reservationId;
+           request.get({
+               "url": url
+           }, function (error, response, body) {
+               res.json(result);
+           });
+
        }
     });
 });
