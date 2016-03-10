@@ -10,7 +10,7 @@ var router = express.Router();
 //안드로이드 푸시하기
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
-    var sender = new gcm.Sender('AIzaSyCI_NNBxxBfZ3VPSPMbYpxcgbFE8Sh537M');
+    var sender = new gcm.Sender('AIzaSyCTqs_tFwUjY-HUEj_tM01nH7Yfg4uBlVE');
 
     //1. 커넥션
     function getConnection(callback) {
@@ -24,7 +24,8 @@ router.get('/:reservationId', function(req, res, next) {
     }
     //2. 예약 상태 확인하기
     function selectReservationState(connection, callback) {
-        var select = "SELECT registration_token, restaurant_name, date_time, before_35m, before_60m, reservation_state " +
+        var select = "SELECT registration_token, restaurant_name, date_time, before_35m, before_60m, " +
+                             "date_format(before_35m,'%Y년 %m월 %d일  %h:%i%p') as B35, date_format(before_60m, '%Y년 %m월 %d일  %h:%i%p') as B60, reservation_state " +
                      "FROM reservation JOIN customer " +
                      "                 ON (reservation.customer_id = customer.customer_id)" +
                      "                 JOIN restaurant " +
@@ -41,7 +42,9 @@ router.get('/:reservationId', function(req, res, next) {
                     "restaurantName": results[0].restaurant_name,
                     "dateTime": results[0].date_time,
                     "before35": results[0].before_35m,
-                    "before60": results[0].before_60m
+                    "before60": results[0].before_60m,
+                    "B35": results[0].B35,
+                    "B60": results[0].B60
                 };
                 callback(null, connection, pushInfo);
             }
@@ -56,7 +59,7 @@ router.get('/:reservationId', function(req, res, next) {
             var message = new gcm.Message();
             message.addNotification("title", "DINER");
             //예약 시간 전 알림해주기
-            async.eachSeries([pushInfo.before60, pushInfo.before35], function(beforeTime, cb) {
+            async.eachSeries([pushInfo.before35, pushInfo.before35], function(beforeTime, cb) {
                 var info = '';
                 var time = '';
                 if (beforeTime === pushInfo.before60) {
@@ -66,11 +69,12 @@ router.get('/:reservationId', function(req, res, next) {
                     info = '35분 전 입니다. 예약 취소가 불가능 합니다.';
                     time = 'B35';
                 }
+
                 var jobName = time + '-' + uuid.v4();
                 var job = nodeschedule.scheduleJob(jobName, beforeTime, function() {
                     pool.getConnection(function(err, connection) {
 
-                        var content = pushInfo.dateTime + pushInfo.restaurantName + ' 예약 시간 ' + info;
+                        var content = pushInfo[time] + ' ' + pushInfo.restaurantName + ' 예약 시간 ' + info;
                         message.addNotification("body", content);
 
                         var select = "SELECT job_id " +
@@ -237,7 +241,7 @@ router.get('/:reservationId', function(req, res, next) {
                                     var job = nodeschedule.scheduleJob(jobName, beforeTime, function() {
                                         pool.getConnection(function(err, connection) {
 
-                                            var content = pushInfo.dateTime + pushInfo.restaurantName + ' 예약 시간 ' + info;
+                                            var content = pushInfo[time] + ' '+ pushInfo.restaurantName + ' 예약 시간 ' + info;
                                             message.addNotification("body", content);
 
                                             var select = "SELECT job_id " +
