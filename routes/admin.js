@@ -241,7 +241,7 @@ router.get('/:reservationId', function(req, res, next) {
                                     var job = nodeschedule.scheduleJob(jobName, beforeTime, function() {
                                         pool.getConnection(function(err, connection) {
 
-                                            var content = pushInfo[time] + ' '+ pushInfo.restaurantName + ' 예약 시간 ' + info;
+                                            var content = pushInfo[time] + ' ' + pushInfo.restaurantName + ' 예약 시간 ' + info;
                                             message.addNotification("body", content);
 
                                             var select = "SELECT job_id " +
