@@ -25,6 +25,7 @@
     "passport-facebook-token": "^3.2.0",
     "passport-local": "^1.0.0",
     "randomstring": "^1.1.4",
+    "request": "^2.69.0",
     "serve-favicon": "~2.3.0",
     "uuid": "^2.0.1"
   }
