@@ -6,7 +6,7 @@ var uuid = require('uuid');
 var gcm = require('node-gcm');
 var router = express.Router();
 
-//TODO: err message들 상황별로 분류하기 transaction할 것있나 다시 생각해보기
+//err message디비에 어떻게 저장할지 객체분석해서 넣기
 //안드로이드 푸시하기
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
@@ -84,8 +84,7 @@ router.get('/:reservationId', function(req, res, next) {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    var content = "push error";
-
+                                    var content = "GCM error"
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
@@ -96,11 +95,15 @@ router.get('/:reservationId', function(req, res, next) {
                                             console.log(jobName + ' error result_log 처리 완료');
                                         }
                                     });
-                                }  else {
+                                } else {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    var content = "push success";
+                                    if (result.results[0].message_id) {
+                                        var content = "push success - " + result.results[0].message_id;
+                                    } else {
+                                        var content = "push error - " + result.results[0].error;
+                                    }
 
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
@@ -248,7 +251,7 @@ router.get('/:reservationId', function(req, res, next) {
                                                         var insert = "INSERT INTO result_log (content, job_id) " +
                                                             "VALUES (?, ?)";
 
-                                                        var content = "push error";
+                                                        var content = "GCM error";
 
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
@@ -264,7 +267,11 @@ router.get('/:reservationId', function(req, res, next) {
                                                         var insert = "INSERT INTO result_log (content, job_id) " +
                                                             "VALUES (?, ?)";
 
-                                                        var content = "push success";
+                                                        if (result.results[0].message_id) {
+                                                            var content = "push success - " + result.results[0].message_id;
+                                                        } else {
+                                                            var content = "push error - " + result.results[0].error;
+                                                        }
 
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
