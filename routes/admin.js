@@ -4,9 +4,11 @@ var moment = require('moment-timezone');
 var nodeschedule = require('node-schedule');
 var uuid = require('uuid');
 var gcm = require('node-gcm');
-var router = express.Router();
 
-//err message디비에 어떻게 저장할지 객체분석해서 넣기
+var router = express.Router();
+var logger = require('../config/loggerconfig');
+
+
 //안드로이드 푸시하기
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
@@ -88,15 +90,15 @@ router.get('/:reservationId', function(req, res, next) {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    var content = "GCM error"
+                                    var content = "GCM error";
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
-                                            console.log(err);
-                                            console.log(jobName + ' error result_log 처리 실패');
+                                            logger.log('error', err);
+                                            logger.log('error', jobName + ' error result_log 처리 실패');
                                         } else {
-                                            console.log(result);
-                                            console.log(jobName + ' error result_log 처리 완료');
+                                            logger.log('info', result);
+                                            logger.log('info', jobName + ' error result_log 처리 완료');
                                         }
                                     });
                                 } else {
@@ -105,20 +107,23 @@ router.get('/:reservationId', function(req, res, next) {
 
                                     if (result.results[0].message_id) {
                                         var content = "push success - " + result.results[0].message_id;
+                                        logger.log('info', result.results[0].message_id);
+                                        logger.log('info', jobName + ' push 처리 완료');
                                     } else {
                                         var content = "push error - " + result.results[0].error;
+                                        logger.log('warn', result.results[0].error);
+                                        logger.log('warn', jobName + ' push 처리 실패');
                                     }
 
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
-                                            console.log(err);
-                                            console.log(jobName + ' success result_log 처리 실패');
+                                            logger.log('error', err);
+                                            logger.log('error', jobName + ' success result_log 처리 실패');
                                         } else {
-                                            console.log(result);
-                                            console.log(jobName + ' success result_log 처리 완료');
+                                            logger.log('info', result);
+                                            logger.log('info', jobName + ' success result_log 처리 완료');
                                         }
-
 
                                     });
                                 }
@@ -141,12 +146,14 @@ router.get('/:reservationId', function(req, res, next) {
                         var insert = "INSERT INTO result_log (content, job_id) " +
                                      "VALUES (?, ?)";
 
-                        connection.query(insert, [content, jobId], function(err) {
+                        connection.query(insert, [content, jobId], function(err, result) {
                             if (err) {
+                                logger.log('error', err);
+                                logger.log('error', jobName + ' add result_log 처리 에러');
                                 cb(err);
-                                console.log(jobName + ' add result_log 처리 에러');
                             } else {
-                                console.log(jobName + ' add result_log 처리 완료');
+                                logger.log('info', result);
+                                logger.log('info', jobName + ' add result_log 처리 완료');
                             }
 
                         });
@@ -225,7 +232,7 @@ router.get('/:reservationId', function(req, res, next) {
                                 var message = new gcm.Message();
                                 message.addNotification("title", "DINER");
 
-                                console.log("infoinfo",pushInfo);
+
                                 //예약 시간 전 알림해주기
                                 async.eachSeries([pushInfo.before60, pushInfo.before35], function(beforeTime, innercb) {
                                     var info = '';
@@ -260,11 +267,11 @@ router.get('/:reservationId', function(req, res, next) {
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
-                                                                console.log(err);
-                                                                console.log(jobName + ' error result_log 처리 실패');
+                                                                logger.log('error', err);
+                                                                logger.log('error', jobName + ' error result_log 처리 실패');
                                                             } else {
-                                                                console.log(result);
-                                                                console.log(jobName + ' error result_log 처리 완료');
+                                                                logger.log('info', result);
+                                                                logger.log('info', jobName + ' error result_log 처리 완료');
                                                             }
                                                         });
                                                     }  else {
@@ -273,18 +280,22 @@ router.get('/:reservationId', function(req, res, next) {
 
                                                         if (result.results[0].message_id) {
                                                             var content = "push success - " + result.results[0].message_id;
+                                                            logger.log('info', result.results[0].message_id);
+                                                            logger.log('info', jobName + ' push 처리 완료');
                                                         } else {
                                                             var content = "push error - " + result.results[0].error;
+                                                            logger.log('warn', result.results[0].error);
+                                                            logger.log('warn', jobName + ' push 처리 실패');
                                                         }
 
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
-                                                                console.log(err);
-                                                                console.log(jobName + ' success result_log 처리 실패');
+                                                                logger.log('error', err);
+                                                                logger.log('error', jobName + ' success result_log 처리 실패');
                                                             } else {
-                                                                console.log(result);
-                                                                console.log(jobName + ' success result_log 처리 완료');
+                                                                logger.log('info', result);
+                                                                logger.log('info', jobName + ' success result_log 처리 완료');
                                                             }
 
 
@@ -322,10 +333,12 @@ router.get('/:reservationId', function(req, res, next) {
 
                                                    connection.query(insert, [content, jobId], function(err) {
                                                        if (err) {
-                                                           innercb(err);
-                                                           console.log(jobName + ' add result_log 처리 에러');
+                                                           logger.log('error', err);
+                                                           logger.log('error', jobName + ' add result_log 처리 에러');
+                                                           cb(err);
                                                        } else {
-                                                           console.log(jobName + ' add result_log 처리 완료');
+                                                           logger.log('info', result);
+                                                           logger.log('info', jobName + ' add result_log 처리 완료');
                                                        }
 
                                                    });
@@ -381,7 +394,6 @@ router.get('/:reservationId', function(req, res, next) {
                             innercallback(err);
                         } else {
                             async.eachSeries(jobs, function(job, innercb) {
-                                console.log("잡잡",jobs);
                                 var jobName = job.job_name;
 
                                 var select = "SELECT job_id " +
@@ -395,28 +407,32 @@ router.get('/:reservationId', function(req, res, next) {
                                         "FROM result_log " +
                                         "WHERE job_id = ?";
 
-                                    connection.query(deletelog, [jobId], function(err) {
+                                    connection.query(deletelog, [jobId], function(err, result) {
                                         if (err) {
-                                            console.log(jobName + ' delete result_log 처리 실패');
                                             connection.rollback();
                                             connection.release();
+                                            logger.log('error', err);
+                                            logger.log('error', jobName + ' delete result_log 처리 에러');
                                             innercb(err);
                                         }
-                                        console.log(jobName + ' delete result_log 처리 완료');
+                                        logger.log('info', result);
+                                        logger.log('info', jobName + ' delete result_log 처리 완료');
                                     });
 
                                     var deletejob = "DELETE " +
                                         "FROM job " +
                                         "WHERE job_id = ?";
 
-                                    connection.query(deletejob, [jobId], function(err) {
+                                    connection.query(deletejob, [jobId], function(err, result) {
                                         if (err) {
-                                            console.log(jobName + ' delete job 처리 실패');
                                             connection.rollback();
                                             connection.release();
+                                            logger.log('error', err);
+                                            logger.log('error', jobName + ' delete job 처리 에러');
                                             innercb(err);
                                         }
-                                        console.log(jobName + ' delete job 처리 완료');
+                                        logger.log('info', result);
+                                        logger.log('info', jobName + ' delete job 처리 완료');
                                     });
 
                                 });
@@ -449,7 +465,7 @@ router.get('/:reservationId', function(req, res, next) {
     }
 
 
-    async.waterfall([getConnection, selectReservationState, generateJob], function(err, results) {
+    async.waterfall([getConnection, selectReservationState, generateJob], function(err) {
         if (err) {
             next(err);
         } else {
