@@ -22,7 +22,7 @@ router.post('/', function (req, res, next) {
         var name = req.body.customerName;
         var password = req.body.password;
         var phone = req.body.customerPhone;
-        var Email = req.body.customerEmail;
+        var email = req.body.customerEmail;
 
 
         function getConnection(callback) {
@@ -38,7 +38,7 @@ router.post('/', function (req, res, next) {
         function selectCustomer(connection, callback) {
             var sql = "SELECT customer_id " +
                       "FROM customer " +
-                      "WHERE email = aes_encrypt(" + connection.escape(customerEmail) + ", unhex(" + connection.escape(hexkey) + ")) ";
+                      "WHERE email = aes_encrypt(" + connection.escape(email) + ", unhex(" + connection.escape(hexkey) + ")) ";
             connection.query(sql, function (err, results) {
                 if (err) {
                     connection.release();
