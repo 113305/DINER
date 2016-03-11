@@ -184,6 +184,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
         });
     }
 
+
     function getCustomer(connection, callback) {
         var sql = "SELECT show_count " +
                   "FROM customer " +
