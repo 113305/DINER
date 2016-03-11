@@ -127,7 +127,7 @@ var passportconfig = function(passport){
         "clientID": authConfig.facebook.appId,
         "clientSecret": authConfig.facebook.appSecret,
         "profileFields": ["id", "displayName"],
-        "passReqToCallback": true //req.body.registration_id
+        "passReqToCallback": true
         }, function (req, accessToken, refreshToken, profile, done) {
             var registrationToken = req.body.registrationToken;
 
