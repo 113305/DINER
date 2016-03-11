@@ -26,6 +26,7 @@ router.get('/', function (req, res, next) {
                 connection.release();
                 callback(err);
             } else {
+                // todo: async.each로 바꾸기1!!!!
                 var result = {
                     "results": {
                         "message": "지역조회가 정상적으로 처리되었습니다.",
@@ -33,7 +34,20 @@ router.get('/', function (req, res, next) {
                             "regionId": results[0].region_id,
                             "regionName": results[0].region_name,
                             "regionPhotoUrl": results[0].region_photo_url
-                        }]
+                        },
+                            {
+                                "regionId": results[1].region_id,
+                                "regionName": results[1].region_name,
+                                "regionPhotoUrl": results[1].region_photo_url
+                            }, {
+                                "regionId": results[2].region_id,
+                                "regionName": results[2].region_name,
+                                "regionPhotoUrl": results[2].region_photo_url
+                            }, {
+                                "regionId": results[3].region_id,
+                                "regionName": results[3].region_name,
+                                "regionPhotoUrl": results[3].region_photo_url
+                            }]
                     }
                 };
                 callback(null, result);
