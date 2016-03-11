@@ -90,7 +90,6 @@ router.get('/:restaurantId', function (req, res, next) {
                 connection.release();
                 callback(err);
             } else {
-                console.log('상세정보', results);
                 callback(null, connection, results);
             }
         });
