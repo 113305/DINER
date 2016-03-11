@@ -19,7 +19,7 @@ router.get('/', function (req, res, next) {
     }
 
     function getRegions(connection, callback) {
-        var sql = "SELECT region_name, region_photo_url " +
+        var sql = "SELECT region_id, region_name, region_photo_url " +
                   "FROM region";
         connection.query(sql, function (err, results) {
             if (err) {
@@ -29,7 +29,11 @@ router.get('/', function (req, res, next) {
                 var result = {
                     "results": {
                         "message": "지역조회가 정상적으로 처리되었습니다.",
-                        "data": results
+                        "data": [{
+                            "regionId": results[0].region_id,
+                            "regionName": results[0].region_name,
+                            "regionPhotoUrl": results[0].region_photo_url
+                        }]
                     }
                 };
                 callback(null, result);
@@ -37,13 +41,13 @@ router.get('/', function (req, res, next) {
         });
     }
 
-    async.waterfall([getConnection, getRegions], function (err, results) {
+    async.waterfall([getConnection, getRegions], function (err, result) {
         if (err) {
             var err = new Error('지역 조회에 실패하였습니다.');
             err.code = "E0009";
             next(err);
         } else {
-            res.json(results);
+            res.json(result);
         }
     });
 });
