@@ -27,30 +27,29 @@ router.get('/', function (req, res, next) {
                 callback(err);
             } else {
                 // todo: async.each로 바꾸기1!!!!
-                var result = {
+                var result = [];
+
+                async.each(results, function(region, cb1) {
+                    result.push({
+                        "regionId":region.region_id,
+                        "regionName": region.region_name,
+                        "regionPhotoUrl": region.region_photo_url
+                    })
+
+                }, function(err) {
+                    if (err) {
+                        cb1(err);
+                    } else {
+                        cb1(null);
+                    }
+                });
+                var result1 = {
                     "results": {
                         "message": "지역조회가 정상적으로 처리되었습니다.",
-                        "data": [{
-                            "regionId": results[0].region_id,
-                            "regionName": results[0].region_name,
-                            "regionPhotoUrl": results[0].region_photo_url
-                        },
-                            {
-                                "regionId": results[1].region_id,
-                                "regionName": results[1].region_name,
-                                "regionPhotoUrl": results[1].region_photo_url
-                            }, {
-                                "regionId": results[2].region_id,
-                                "regionName": results[2].region_name,
-                                "regionPhotoUrl": results[2].region_photo_url
-                            }, {
-                                "regionId": results[3].region_id,
-                                "regionName": results[3].region_name,
-                                "regionPhotoUrl": results[3].region_photo_url
-                            }]
+                        "data": result
                     }
                 };
-                callback(null, result);
+                callback(null, result1);
             }
         });
     }
