@@ -62,7 +62,7 @@ router.get('/', function (req, res, next) {
 });
 
 
-// TODO: 레스토랑 상세정보 보기 (/restaurants/:restaurantId/detail  HTTP GET)
+// TODO: 레스토랑 상세정보 보기 (/restaurants/:restaurantId  HTTP GET)
 
 router.get('/:restaurantId', function (req, res, next) {
 
