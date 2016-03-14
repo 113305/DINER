@@ -26,14 +26,13 @@ router.get('/', function (req, res, next) {
                 connection.release();
                 callback(err);
             } else {
-                // todo: async.each로 바꾸기1!!!!
                 var result = [];
 
                 async.each(results, function(region, cb1) {
                     result.push({
                         "regionId":region.region_id,
-                        "regionName": region.region_name,
-                        "regionPhotoUrl": region.region_photo_url
+                        "regionPhotoUrl": region.region_photo_url,
+                        "regionName": region.region_name
                     })
 
                 }, function(err) {
@@ -42,14 +41,14 @@ router.get('/', function (req, res, next) {
                     } else {
                         cb1(null);
                     }
-                });
-                var result1 = {
+                })
+                var result = {
                     "results": {
                         "message": "지역조회가 정상적으로 처리되었습니다.",
                         "data": result
                     }
                 };
-                callback(null, result1);
+                callback(null, result);
             }
         });
     }
@@ -85,15 +84,17 @@ router.get('/:regionId', function (req, res, next) {
     function selectRestaurant(connection, callback) {
 
         if (req.query.restaurantName === undefined) {  // 쿼리 없을때 (구)전체 조회
-            var select = "SELECT r.restaurant_id , restaurant_name, restaurant_photo_url, " +
+            var select = "SELECT r.restaurant_id as restaurant_id, restaurant_name, restaurant_photo_url, " +
                          "       dong_info, restaurant_class " +
                          "FROM restaurant r join restaurant_photo rp on (r.restaurant_id = rp.restaurant_id) " +
-                         "WHERE region_id = ?";
+                         "WHERE region_id = ? " +
+                         "GROUP BY restaurant_id";
         } else {  // 쿼리 있을때 (구에서) 이름 조회 
-            var select = "SELECT r.restaurant_id, restaurant_name, restaurant_photo_url, " +
+            var select = "SELECT r.restaurant_id as restaurant_id, restaurant_name, restaurant_photo_url, " +
                          "       dong_info, restaurant_class " +
                          "FROM restaurant r join restaurant_photo rp on (r.restaurant_id = rp.restaurant_id) " +
-                         "WHERE region_id = ? and restaurant_name = ?";
+                         "WHERE region_id = ? and restaurant_name = ?" +
+                         "GROUP BY restaurant_id";
         }
         connection.query(select, [regionId, restaurantName], function (err, results) {
             if (err) {
@@ -104,16 +105,32 @@ router.get('/:regionId', function (req, res, next) {
                     err.code = "E0010a";
                     next(err);
                 } else {
-                    var result = {
-                        "results": {
-                            "restaurantId": results[0].restaurant_id,
-                            "restaurantName": results[0].restaurant_name,
-                            "dongInfo": results[0].dong_info,
-                            "restaurantClass": results[0].restaurant_class,
-                            "restaurantPhotoUrl": results[0].restaurant_photo_url
+                    var result = [];
+
+                    async.each(results, function(restaurant, cb1) {
+                        result.push({
+                            "restaurantId": restaurant.restaurant_id,
+                            "restaurantName": restaurant.restaurant_name,
+                            "dongInfo": restaurant.dong_info,
+                            "restaurantClass": restaurant.restaurant_class,
+                            "restaurantPhotoUrl": restaurant.restaurant_photo_url
+                        })
+                    }, function(err) {
+                        if (err) {
+                            cb1(err);
+                        } else {
+                            cb1(null);
                         }
-                    }
-                    callback(null, result);
+                    });
+
+                    var result1 = {
+                        "results": {
+                            "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                            "data": result
+                        }
+                    };
+
+                    callback(null, result1);
                 }
 
             }
@@ -129,12 +146,12 @@ router.get('/:regionId', function (req, res, next) {
             err.code = "E0010b";
             next(err);
         } else {
-            var result = {
-                "results": {
-                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                    "data": result
-                }
-            };
+            //var result = {
+            //    "results": {
+            //        "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+            //        "data": result
+            //    }
+            //};
             res.json(result);
         }
     });
