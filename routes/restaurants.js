@@ -22,23 +22,40 @@ router.get('/', function (req, res, next) {
         var select = "SELECT r.restaurant_id as restaurant_id, restaurant_name, restaurant_photo_url, " +
                      "       dong_info, restaurant_class " +
                      "FROM restaurant r join restaurant_photo rp on (r.restaurant_id = rp.restaurant_id) " +
-                     "WHERE restaurant_name = ?";
+                     "WHERE restaurant_name = ? " +
+                     "GROUP BY restaurant_id";
         connection.query(select, [restaurantName], function (err, results) {
             if (err) {
                 connection.release();
                 callback(err);
             } else {
 
-                var result = {
+                var result = [];
+
+                async.each(results, function(restaurant, cb1) {
+                    result.push({
+                        "restaurantId": restaurant.restaurant_id,
+                        "restaurantName": restaurant.restaurant_name,
+                        "dongInfo": restaurant.dong_info,
+                        "restaurantClass": restaurant.restaurant_class,
+                        "restaurantPhotoUrl": restaurant.restaurant_photo_url
+                    })
+                }, function(err) {
+                    if (err) {
+                        cb1(err);
+                    } else {
+                        cb1(null);
+                    }
+                });
+
+                var result1 = {
                     "results": {
-                        "restaurantId": results[0].restaurant_id,
-                        "restaurantName": results[0].restaurant_name,
-                        "dongInfo": results[0].dong_info,
-                        "restaurantClass": results[0].restaurant_class,
-                        "restaurantPhotoUrl": results[0].restaurant_photo_url
+                        "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                        "data": result
                     }
                 };
-                callback(null, result);
+
+                callback(null, result1);
             }
         });
     }
@@ -50,12 +67,6 @@ router.get('/', function (req, res, next) {
             err.code = "E0012";
             next(err);
         } else {
-            var result = {
-                "results": {
-                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                    "data": result
-                }
-            };
             res.json(result);
         }
     });
