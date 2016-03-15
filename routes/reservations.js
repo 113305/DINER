@@ -242,6 +242,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
 
                         async.waterfall([selectMenuId, insertMenuReserveTable], function (err, result) {
                             if (err) {
+                                connection.release();
                                 cb1(err);
                             } else {
                                 cb1(null, reservationId);
