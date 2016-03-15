@@ -146,15 +146,11 @@ var passportconfig = function(passport){
                              "FROM customer " +
                              "WHERE facebook_id = ?";
                 connection.query(select, [profile.id], function(err, results) {
-
-
                     if (err) {
                         connection.release();
-                        var err = new Error('1');
                         callback(err);
                     } else {
                         if (results.length === 0 ) {
-
                             var insert = "INSERT INTO customer (facebook_id, facebook_token, registration_token, facebook_name) " +
                                          "VALUES(" + connection.escape(profile.id) + ", " +
                                                      connection.escape(accessToken) + ", " +
@@ -173,7 +169,7 @@ var passportconfig = function(passport){
                                 }
                             });
                         } else {
-                            if (accessToken === results[0].facebook_token) {
+                            if (accessToken === results[0].facebook_token && registrationToken === results[0].registration_token) {
                                 connection.release();
                                 var customer = {
                                     "id": results[0].customer_id
