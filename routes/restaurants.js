@@ -156,10 +156,10 @@ router.get('/:restaurantId', function (req, res, next) {
     }
     function makeJSON(results, callback) {
         //JSON 객체 생성
-        var restaurantList = [];
+        var restaurant_element = {};
 
         async.eachSeries(results, function (item, cb) {
-            var restaurant_element = {
+            restaurant_element = {
                     "restaurantId": item.restaurant_id,
                     "restaurantName": item.restaurant_name,
                     "address": item.address,
@@ -179,14 +179,13 @@ router.get('/:restaurantId', function (req, res, next) {
                     "restaurantPhotoUrl": item.restaurant_photo_url,
                     "menu": item.menu
             };
-            restaurantList.push(restaurant_element);
-            cb(null);
+            cb(null, restaurant_element);
         }, function (err) {
             if (err) {
                 callback(err);
             } else {
                 var result = {
-                    "data": restaurantList
+                    "data": restaurant_element
                 };
                 callback(null, result);
             }
