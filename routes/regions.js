@@ -48,6 +48,8 @@ router.get('/', function (req, res, next) {
                         "data": result
                     }
                 };
+
+                connection.release();
                 callback(null, result);
             }
         });
@@ -130,6 +132,7 @@ router.get('/:regionId', function (req, res, next) {
                         }
                     };
 
+                    connection.release();
                     callback(null, result1);
                 }
 
