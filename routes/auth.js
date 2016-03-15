@@ -45,7 +45,7 @@ router.post('/login', function(req, res, next) {
                                 connection.release();
                                 if (err) {
                                     var err = new Error('registrationToken 업데이트가 실패했습니다.');
-                                    err.code = '';
+                                    err.code = 'E0001c';
                                     callback(err);
                                 } else {
                                     callback(null);
