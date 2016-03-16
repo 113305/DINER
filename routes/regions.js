@@ -19,21 +19,21 @@ router.get('/', function (req, res, next) {
     }
 
     function getRegions(connection, callback) {
-        var sql = "SELECT region_id, region_name, region_photo_url " +
-                  "FROM region";
-        connection.query(sql, function (err, results) {
-            if (err) {
-                connection.release();
-                callback(err);
-            } else {
-                var result = [];
+                        var sql = "SELECT region_id, region_name, region_photo_url " +
+                            "FROM region";
+                        connection.query(sql, function (err, results) {
+                            if (err) {
+                                connection.release();
+                                callback(err);
+                            } else {
+                                var result = [];
 
-                async.each(results, function(region, cb1) {
-                    result.push({
-                        "regionId":region.region_id,
-                        "regionPhotoUrl": region.region_photo_url,
-                        "regionName": region.region_name
-                    })
+                                async.each(results, function(region, cb1) {
+                                    result.push({
+                                        "regionId":region.region_id,
+                                        "regionPhotoUrl": region.region_photo_url,
+                                        "regionName": region.region_name
+                                    })
 
                 }, function(err) {
                     if (err) {
@@ -41,7 +41,7 @@ router.get('/', function (req, res, next) {
                     } else {
                         cb1(null);
                     }
-                })
+                });
                 var result = {
                     "results": {
                         "message": "지역조회가 정상적으로 처리되었습니다.",
