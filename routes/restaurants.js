@@ -90,120 +90,115 @@ router.get('/:restaurantId', function (req, res, next) {
     }
 
     function selectRestaurant(connection, callback) {
-        var select = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
-                     "       reward_photo_url, reward_name, reward_info, " +
-                     "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
-                     "       restaurant_phone, restaurant_info " +
-                     "FROM restaurant " +
-                     "WHERE restaurant_id = ?";
-        connection.query(select, [restaurantId], function (err, results) {
+        var sql = "SELECT restaurant_id, restaurant_name, address, website_url, business_hours, " +
+                  "       reward_photo_url, reward_name, reward_info, " +
+                  "       take_out, parking, smoking, break_time, discount_info, avg_score, " +
+                  "       restaurant_phone, restaurant_info " +
+                  "FROM restaurant " +
+                  "WHERE restaurant_id = ?";
+
+        connection.query(sql, [restaurantId], function(err, results) {
             if (err) {
                 connection.release();
-                callback(err);
-            } else {
-                callback(null, connection, results);
-            }
-        });
-    }
-
-    function selectRestaurantDetails(connection, results, callback) {
-        var idx = 0;
-        async.eachSeries(results, function (item, cb) {
-            var photo_select = "SELECT restaurant_photo_url as restaurantPhotoUrl " +
-                "FROM restaurant_photo " +
-                "WHERE restaurant_id = ?";
-            var menu_select = "SELECT m.menu_class_id as menuClassId, menu_class_name as menuClassName, " +
-                              "       menu_name as menuName, menu_photo_url as menuPhotoUrl, price, " +
-                              "       main_ingredient as mainIngredient " +
-                              "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
-                              "WHERE restaurant_id = ?";
-            async.series([function (cb2) {
-                connection.query(photo_select, item.restaurant_id, function (err, photoResults) {
-                    if (err) {
-                        cb2(err);
-                    } else {
-                        results[idx].restaurant_photo_url = photoResults;
-                        cb2(null);
-                    }
-                });
-            }, function (cb2) {
-                connection.query(menu_select, item.restaurant_id, function (err, menuResults) {
-                    if (err) {
-                        cb2(err);
-                    } else {
-                        results[idx].menu = menuResults;
-                        cb2(null);
-                    }
-                });
-            }], function (err) {
-                if (err) {
-                    cb(err);
-                } else {
-                    idx++;
-                    cb(null);
-                }
-            });
-        }, function (err) {
-            if (err) {
-                callback(err);
-            } else {
-                connection.release();
-                callback(null, results);
-            }
-        });
-
-
-    }
-    function makeJSON(results, callback) {
-        //JSON 객체 생성
-        var restaurant_element = {};
-
-        async.eachSeries(results, function (item, cb) {
-            restaurant_element = {
-                    "restaurantId": item.restaurant_id,
-                    "restaurantName": item.restaurant_name,
-                    "address": item.address,
-                    "restaurantPhone": item.restaurant_phone,
-                    "businessHours": item.business_hours,
-                    "websiteUrl": item.website_url,
-                    "restaurantClass": item.restaurant_class,
-                    "rewardPhotoUrl": item.reward_photo_url,
-                    "rewardInfo": item.reward_info,
-                    "rewardName": item.reward_name,
-                    "takeOut": item.take_out,
-                    "parking": item.parking,
-                    "smoking": item.smoking,
-                    "breakTime": item.break_time,
-                    "avgScore": item.avg_score,
-                    "restaurantInfo": item.restaurant_info,
-                    "restaurantPhotoUrl": item.restaurant_photo_url,
-                    "menu": item.menu
-            };
-            cb(null, restaurant_element);
-        }, function (err) {
-            if (err) {
                 callback(err);
             } else {
                 var result = {
-                    "data": restaurant_element
+                    "restaurantName": results[0].restaurant_name,
+                    "address": results[0].address,
+                    "websiteUrl": results[0].website_url,
+                    "businessHours": results[0].business_hours,
+                    "rewardPhotoUrl": results[0].reward_photo_url,
+                    "rewardName": results[0].reward_name,
+                    "rewardInfo": results[0].reward_info,
+                    "takeOut": results[0].take_out,
+                    "parking": results[0].parking,
+                    "smoking": results[0].smoking,
+                    "breakTime": results[0].break_time,
+                    "discountInfo": results[0].discount_info,
+                    "avgScore": results[0].avg_score,
+                    "restaurantPhone": results[0].restaurant_phone,
+                    "restaurantInfo": results[0].restaurant_info,
+                    "restaurantPhotoUrl": [],
+                    "menu": []
                 };
-                callback(null, result);
+
+                callback(null, connection, result);
             }
         });
-
     }
 
-    async.waterfall([getConnection, selectRestaurant, selectRestaurantDetails, makeJSON], function (err, result) {
+    function selectRestaurantPhotoUrl(connection, result, callback) {
+        var sql = "SELECT restaurant_photo_url " +
+                  "FROM restaurant_photo " +
+                  "WHERE restaurant_id = ?";
+
+        connection.query(sql, [restaurantId], function(err, results) {
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
+                async.eachSeries(results, function(photo, cb1) {
+                    result.restaurantPhotoUrl.push({
+                        "restaurantPhotoUrl": photo.restaurant_photo_url
+                    });
+                    cb1(null);
+                }, function(err) {
+                    if (err) {
+                        cb1(err);
+                    } else {
+                        callback(null, connection, result);
+                    }
+                });
+
+            }
+
+        });
+    }
+
+    function selectRestaurantMenu(connection, result, callback) {
+        var sql = "SELECT m.menu_class_id as menu_class_id, menu_class_name, " +
+                  "       menu_name, menu_photo_url, price, main_ingredient, popular " +
+                  "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
+                  "WHERE restaurant_id = ?";
+
+        connection.query(sql, [restaurantId], function(err, results) {
+            if (err) {
+                connection.release();
+                callback(err);
+            } else {
+                async.eachSeries(results, function(menu, cb1) {
+                    result.menu.push({
+                        "menuClassName" : menu.menu_class_name,
+                        "menuName": menu.menu_name,
+                        "price": menu.price,
+                        "mainIngredient": menu.main_ingredient,
+                        "menuPhotoUrl": menu.menu_photo_url,
+                        "popular": menu.popular
+                    });
+                    cb1(null);
+                }, function(err) {
+                    if (err) {
+                        cb1(err);
+                    } else {
+                        callback(null, result);
+                    }
+                });
+            }
+
+        });
+    }
+
+    async.waterfall([getConnection, selectRestaurant, selectRestaurantPhotoUrl, selectRestaurantMenu], function (err, result) {
         if (err) {
-            var err = new Error('레스토랑 조회에 실패하였습니다.');
+            var err = new Error('레스토랑 싱세정보 조회에 실패하였습니다.');
             err.status = 401;
             err.code = "E0011";
             next(err);
         } else {
             var result = {
                 "results": {
-                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                    "data": result.data
+                    "message": "레스토랑 상세정보 조회가 정상적으로 처리되었습니다.",
+                    "data": result
                 }
             };
             res.json(result);
