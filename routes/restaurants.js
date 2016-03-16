@@ -188,6 +188,7 @@ router.get('/:restaurantId', function (req, res, next) {
         });
     }
 
+
     async.waterfall([getConnection, selectRestaurant, selectRestaurantPhotoUrl, selectRestaurantMenu], function (err, result) {
         if (err) {
             var err = new Error('레스토랑 싱세정보 조회에 실패하였습니다.');
