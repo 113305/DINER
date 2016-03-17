@@ -103,6 +103,7 @@ router.get('/:restaurantId', function (req, res, next) {
                 callback(err);
             } else {
                 var result = {
+                    "restaurantId": results[0].restaurant_id,
                     "restaurantName": results[0].restaurant_name,
                     "address": results[0].address,
                     "websiteUrl": results[0].website_url,
@@ -158,7 +159,7 @@ router.get('/:restaurantId', function (req, res, next) {
 
     function selectRestaurantMenu(connection, result, callback) {
         var sql = "SELECT m.menu_class_id as menu_class_id, menu_class_name, " +
-                  "       menu_name, menu_photo_url, price, main_ingredient, popular " +
+                  "       menu_id, menu_name, menu_photo_url, price, main_ingredient, popular " +
                   "FROM menu m join menu_class mc on (m.menu_class_id = mc.menu_class_id) " +
                   "WHERE restaurant_id = ?";
 
@@ -169,7 +170,9 @@ router.get('/:restaurantId', function (req, res, next) {
             } else {
                 async.eachSeries(results, function(menu, cb1) {
                     result.menu.push({
+                        "menuClassId": menu.menu_class_id,
                         "menuClassName" : menu.menu_class_name,
+                        "menuId": menu.menu_id,
                         "menuName": menu.menu_name,
                         "price": menu.price,
                         "mainIngredient": menu.main_ingredient,
