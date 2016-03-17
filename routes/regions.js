@@ -19,21 +19,21 @@ router.get('/', function (req, res, next) {
     }
 
     function getRegions(connection, callback) {
-                        var sql = "SELECT region_id, region_name, region_photo_url " +
-                            "FROM region";
-                        connection.query(sql, function (err, results) {
-                            if (err) {
-                                connection.release();
-                                callback(err);
-                            } else {
-                                var result = [];
+        var sql = "SELECT region_id, region_name, region_photo_url " +
+                  "FROM region";
+        connection.query(sql, function (err, results) {
+            connection.release();
+            if (err) {
+                callback(err);
+            } else {
+                var result = [];
 
-                                async.each(results, function(region, cb1) {
-                                    result.push({
-                                        "regionId":region.region_id,
-                                        "regionPhotoUrl": region.region_photo_url,
-                                        "regionName": region.region_name
-                                    })
+                async.each(results, function(region, cb1) {
+                    result.push({
+                        "regionId":region.region_id,
+                        "regionPhotoUrl": region.region_photo_url,
+                        "regionName": region.region_name
+                    })
 
                 }, function(err) {
                     if (err) {
@@ -49,7 +49,6 @@ router.get('/', function (req, res, next) {
                     }
                 };
 
-                connection.release();
                 callback(null, result);
             }
         });
@@ -99,6 +98,7 @@ router.get('/:regionId', function (req, res, next) {
                          "GROUP BY restaurant_id";
         }
         connection.query(select, [regionId, restaurantName], function (err, results) {
+            connection.release();
             if (err) {
                 callback(err);
             } else {
@@ -131,8 +131,6 @@ router.get('/:regionId', function (req, res, next) {
                             "data": result
                         }
                     };
-
-                    connection.release();
                     callback(null, result1);
                 }
 
