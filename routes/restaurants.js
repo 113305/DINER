@@ -29,7 +29,6 @@ router.get('/', function (req, res, next) {
             if (err) {
                 callback(err);
             } else {
-
                 var result = [];
 
                 async.each(results, function(restaurant, cb1) {
@@ -39,12 +38,13 @@ router.get('/', function (req, res, next) {
                         "dongInfo": restaurant.dong_info,
                         "restaurantClass": restaurant.restaurant_class,
                         "restaurantPhotoUrl": restaurant.restaurant_photo_url
-                    })
+                    });
+                    cb1(null);
                 }, function(err) {
                     if (err) {
-                        cb1(err);
+                        callback(err);
                     } else {
-                        cb1(null);
+                        callback(null, result);
                     }
                 });
 
@@ -146,7 +146,7 @@ router.get('/:restaurantId', function (req, res, next) {
                 }, function(err) {
                     if (err) {
                         connection.release();
-                        cb1(err);
+                        callback(err);
                     } else {
                         callback(null, connection, result);
                     }
@@ -182,7 +182,7 @@ router.get('/:restaurantId', function (req, res, next) {
                     cb1(null);
                 }, function(err) {
                     if (err) {
-                        cb1(err);
+                        callback(err);
                     } else {
                         callback(null, result);
                     }
