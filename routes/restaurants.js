@@ -25,8 +25,8 @@ router.get('/', function (req, res, next) {
                      "WHERE restaurant_name = ? " +
                      "GROUP BY restaurant_id";
         connection.query(select, [restaurantName], function (err, results) {
+            connection.release();
             if (err) {
-                connection.release();
                 callback(err);
             } else {
 
@@ -144,6 +144,7 @@ router.get('/:restaurantId', function (req, res, next) {
                     cb1(null);
                 }, function(err) {
                     if (err) {
+                        connection.release();
                         cb1(err);
                     } else {
                         callback(null, connection, result);
@@ -162,8 +163,8 @@ router.get('/:restaurantId', function (req, res, next) {
                   "WHERE restaurant_id = ?";
 
         connection.query(sql, [restaurantId], function(err, results) {
+            connection.release();
             if (err) {
-                connection.release();
                 callback(err);
             } else {
                 async.eachSeries(results, function(menu, cb1) {
