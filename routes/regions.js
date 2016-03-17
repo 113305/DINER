@@ -33,23 +33,22 @@ router.get('/', function (req, res, next) {
                         "regionId":region.region_id,
                         "regionPhotoUrl": region.region_photo_url,
                         "regionName": region.region_name
-                    })
-
+                    });
+                    cb1(null);
                 }, function(err) {
                     if (err) {
-                        cb1(err);
+                        callback(err);
                     } else {
-                        cb1(null);
+                        var result1 = {
+                            "results": {
+                                "message": "지역조회가 정상적으로 처리되었습니다.",
+                                "data": result
+                            }
+                        };
+                        callback(null, result1);
                     }
                 });
-                var result = {
-                    "results": {
-                        "message": "지역조회가 정상적으로 처리되었습니다.",
-                        "data": result
-                    }
-                };
 
-                callback(null, result);
             }
         });
     }
@@ -117,21 +116,20 @@ router.get('/:regionId', function (req, res, next) {
                             "restaurantClass": restaurant.restaurant_class,
                             "restaurantPhotoUrl": restaurant.restaurant_photo_url
                         })
+                        cb1(null);
                     }, function(err) {
                         if (err) {
-                            cb1(err);
+                            callback(err);
                         } else {
-                            cb1(null);
+                            var result1 = {
+                                "results": {
+                                    "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
+                                    "data": result
+                                }
+                            };
+                            callback(null, result1);
                         }
                     });
-
-                    var result1 = {
-                        "results": {
-                            "message": "레스토랑 조회가 정상적으로 처리되었습니다.",
-                            "data": result
-                        }
-                    };
-                    callback(null, result1);
                 }
 
             }
