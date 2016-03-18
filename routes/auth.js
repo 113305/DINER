@@ -29,9 +29,9 @@ router.post('/login', function(req, res, next) {
                         function getConnection(callback) {
                             pool.getConnection(function (err, connection) {
                                 if (err) {
-                                  callback(err);
+                                    callback(err);
                                 }  else {
-                                  callback(null, connection);
+                                    callback(null, connection);
                               }
                             });
                         }
