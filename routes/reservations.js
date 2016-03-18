@@ -5,6 +5,7 @@ var moment = require('moment-timezone');
 var request = require('request');
 var router = express.Router();
 
+var logger = require('../config/loggerconfig');
 
 
 // 예약하기 (/reservations HTTP POST) noshowpro계산해서 넣기
@@ -31,6 +32,8 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var childNumber = req.body.childNumber;
     var etcRequest = req.body.etcRequest;
     var orderLists = req.body.orderLists;
+
+    logger.log('info', 'orderLists' + orderLists);
 
 
     var year = parseInt(req.body.year);
@@ -209,6 +212,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                         });
 
                     } else {
+                        logger.log('info', 'orderLists' + orderLists);
                         var order = orderLists.split(",");
                             var menuName = order[0];
                             var quantity = order[1];
