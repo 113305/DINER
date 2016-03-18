@@ -118,11 +118,11 @@ router.post('/', function (req, res, next) {
     }
 });
 
-// 회원 탈퇴하기 (/customers HTTP DELETE)
+// 회원 탈퇴하기 (/customers HTTP post)
 // 바로 삭제하면 안되니까
 // 상태를 만들어서 active: 0, 탈퇴요청: 1 (로그인안되게) 이런식으루
 
-router.delete('/', isLoggedIn, function (req, res, next) {
+router.post('/delete', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
     function getConnection(callback) {
@@ -219,49 +219,49 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                 connection.release();
                 callback(err);
             } else {
-                    async.eachSeries(results, function (element, cb1) {
-                        element.menu = [];
+                async.eachSeries(results, function (element, cb1) {
+                    element.menu = [];
 
-                        var sql1 = "SELECT menu_name, quantity " +
-                            "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
-                            "WHERE reservation_id = ?";
+                    var sql1 = "SELECT menu_name, quantity " +
+                        "FROM menu_reservation mr join menu m on (mr.menu_id = m.menu_id) "+
+                        "WHERE reservation_id = ?";
 
-                        connection.query(sql1, [element.reservation_id], function (err, results1) {
-                            if (err) {
-                                connection.release();
-                                callback(err);
-                            } else {
-                                async.eachSeries(results1, function (menu, cb2) {
-                                    element.menu.push({
-                                        "menuName": menu.menu_name,
-                                        "quantity": menu.quantity
-                                    });
-                                    cb2(null);
-                                }, function(err) {
-                                    if(err){
-                                        cb2(err);
-                                    } else {
-                                        result.reservation.push({
-                                            "restaurantId": element.restaurant_id,
-                                            "restaurantName": element.restaurant_name,
-                                            "dateTime": element.date_time,
-                                            "adultNumber": element.adult_number,
-                                            "childNumber": element.child_number,
-                                            "etcRequest": element.etc_request,
-                                            "menu": element.menu
-                                        });
-                                        cb1(null, result);
-                                    }
-                                });
-                            }
-                        });
-                    }, function(err) {
-                        if(err){
-                            cb1(err);
+                    connection.query(sql1, [element.reservation_id], function (err, results1) {
+                        if (err) {
+                            connection.release();
+                            callback(err);
                         } else {
-                            callback(null, connection, result);
+                            async.eachSeries(results1, function (menu, cb2) {
+                                element.menu.push({
+                                    "menuName": menu.menu_name,
+                                    "quantity": menu.quantity
+                                });
+                                cb2(null);
+                            }, function(err) {
+                                if(err){
+                                    cb2(err);
+                                } else {
+                                    result.reservation.push({
+                                        "restaurantId": element.restaurant_id,
+                                        "restaurantName": element.restaurant_name,
+                                        "dateTime": element.date_time,
+                                        "adultNumber": element.adult_number,
+                                        "childNumber": element.child_number,
+                                        "etcRequest": element.etc_request,
+                                        "menu": element.menu
+                                    });
+                                    cb1(null, result);
+                                }
+                            });
                         }
                     });
+                }, function(err) {
+                    if(err){
+                        cb1(err);
+                    } else {
+                        callback(null, connection, result);
+                    }
+                });
             }
         });
     }
@@ -293,7 +293,6 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     async.waterfall([getConnection, getCustomer, getReservation, getPhoto], function (err, result) {
         if (err) {
             var err = new Error('회원 정보 조회에 실패하였습니다.');
-            err.status = 401;
             err.code = "E0003";
             next(err);
         } else {
