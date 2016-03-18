@@ -212,7 +212,6 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                         });
 
                     } else {
-                        logger.log('info', 'orderLists' + orderLists);
                         var order = orderLists.split(",");
                             var menuName = order[0];
                             var quantity = order[1];
