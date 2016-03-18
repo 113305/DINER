@@ -160,6 +160,9 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             var menuName = order[0];
                             var quantity = order[1];
 
+                            logger.log('info', 'menuName' + menuName);
+                            logger.log('info', 'quantity' + quantity);
+
                             function selectMenuId (cb3) {
                                 var sql = "SELECT menu_id " +
                                           "FROM menu "+
@@ -210,6 +213,8 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                             var menuName = order[0];
                             var quantity = order[1];
 
+                        logger.log('info', 'menuName' + menuName);
+                        logger.log('info', 'quantity' + quantity);
                         function selectMenuId (cb2) {
                             var sql = "SELECT menu_id " +
                                     "FROM menu "+
