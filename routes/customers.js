@@ -381,7 +381,7 @@ router.put('/me', isLoggedIn, function (req, res, next) {
 
                 // 사용자 핸드폰번호 업데이트
                 function updateCustomerPhone (cb1) {
-                    if (phone === oldInfo.oldphone || phone === undefined ) {   // 안드로이드에서 null값 넣어주기로 했으니까 undefined 일땐 체크 안함
+                    if (phone === oldInfo.oldphone) {
                         cb1(null);
                     } else {
                         var sql = "UPDATE customer " +
