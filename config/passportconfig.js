@@ -20,7 +20,6 @@ var passportconfig = function(passport){
                              "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
                              "convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
                              "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
-                             "convert(aes_decrypt(facebook_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as facebookName " +
                              "FROM customer " +
                              "WHERE customer_id = " + connection.escape(id);
 
@@ -29,21 +28,13 @@ var passportconfig = function(passport){
                     if (err) {
                         done(err);
                     } else {
-                        if (results[0].name) {
-                            var user = {
-                                "customerId": results[0].customer_id,
-                                "customerName": results[0].name,
-                                "customerEmail": results[0].email,
-                                "customerPhone": results[0].phone
-                            };
-                        } else {
-                            var user = {
-                                "customerId": results[0].customer_id,
-                                "customerName": results[0].facebookName,
-                                "customerEmail": results[0].email,
-                                "customerPhone": results[0].phone
-                            };
-                        }
+                        var user = {
+                            "customerId": results[0].customer_id,
+                            "customerName": results[0].name,
+                            "customerEmail": results[0].email,
+                            "customerPhone": results[0].phone
+                        };
+
                         done(null, user);
                     }
                 });
@@ -151,7 +142,7 @@ var passportconfig = function(passport){
                         callback(err);
                     } else {
                         if (results.length === 0 ) {
-                            var insert = "INSERT INTO customer (facebook_id, facebook_token, registration_token, facebook_name) " +
+                            var insert = "INSERT INTO customer (facebook_id, facebook_token, registration_token, customer_name) " +
                                          "VALUES(" + connection.escape(profile.id) + ", " +
                                                      connection.escape(accessToken) + ", " +
                                                      connection.escape(registrationToken) + ", " +
