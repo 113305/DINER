@@ -4,6 +4,7 @@ var async = require('async');
 var moment = require('moment-timezone');
 var request = require('request');
 var router = express.Router();
+var util = require('util');
 
 var logger = require('../config/loggerconfig');
 
@@ -34,8 +35,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var orderLists = req.body.orderLists;
 
     logger.log('info', 'orderLists' + orderLists);
-    logger.log('info', 'request' + req.body);
-    logger.log('info', 'request' + req);
+    logger.log('info', 'request' + util.inspect(req));
 
 
     var year = parseInt(req.body.year);
