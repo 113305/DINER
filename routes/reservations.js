@@ -34,6 +34,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var orderLists = req.body.orderLists;
 
     logger.log('info', 'orderLists' + orderLists);
+    logger.log('info', 'request' + req);
 
 
     var year = parseInt(req.body.year);
