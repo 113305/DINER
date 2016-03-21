@@ -32,7 +32,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var adultNumber = req.body.adultNumber;
     var childNumber = req.body.childNumber;
     var etcRequest = req.body.etcRequest;
-    var orderLists = req.body.orderLists;
+    var orderLists = req.body["orderLists[]"];
 
     logger.log('info', 'orderLists' + orderLists);
     logger.log('info', 'request' + util.inspect(req));
