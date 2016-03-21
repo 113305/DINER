@@ -122,7 +122,7 @@ router.post('/', function (req, res, next) {
 // 바로 삭제하면 안되니까
 // 상태를 만들어서 active: 0, 탈퇴요청: 1 (로그인안되게) 이런식으루
 
-router.post('/delete', isLoggedIn, function (req, res, next) {
+router.get('/delete', isLoggedIn, function (req, res, next) {
     var customer = req.user;
 
     function getConnection(callback) {
