@@ -5,6 +5,8 @@ var hexkey = process.env.DINER_HEX_KEY;
 
 var router = express.Router();
 
+var logger = require('../config/loggerconfig');
+
 function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
     if (!req.isAuthenticated()) {
         var err = new Error('로그인이 필요합니다...');
@@ -174,6 +176,8 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     var customer = req.user;  // 세션에저장된 user정보 id, name, phone, email, password, facebookEnail, facebookName
     var result = {};
 
+    logger.log('info', 'customer' + customer);
+
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
             if (err) {
@@ -210,7 +214,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     }
 
     function getReservation (connection, result, callback) {
-        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_name, date_time, adult_number, child_number, etc_request, score "+
+        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_class, dong_info, restaurant_name, date_time, adult_number, child_number, etc_request, score "+
                   "FROM reservation res join restaurant r on (r.restaurant_id = res.restaurant_id) "+
                   "WHERE customer_id = ? and reservation_state != 2";
 
@@ -244,6 +248,8 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
                                     result.reservation.push({
                                         "restaurantId": element.restaurant_id,
                                         "restaurantName": element.restaurant_name,
+                                        "restaurantClass": element.restaurant_class,
+                                        "dongInfo": element.dong_info,
                                         "dateTime": element.date_time,
                                         "adultNumber": element.adult_number,
                                         "childNumber": element.child_number,
