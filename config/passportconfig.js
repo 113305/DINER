@@ -19,7 +19,7 @@ var passportconfig = function(passport){
                 var select = "SELECT customer_id, " +
                              "convert(aes_decrypt(customer_name, unhex(" + connection.escape(hexkey) + ")) using utf8) as name, " +
                              "convert(aes_decrypt(email, unhex(" + connection.escape(hexkey) + ")) using utf8) as email, " +
-                             "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone, " +
+                             "convert(aes_decrypt(customer_phone, unhex(" + connection.escape(hexkey) + ")) using utf8) as phone " +
                              "FROM customer " +
                              "WHERE customer_id = " + connection.escape(id);
 
