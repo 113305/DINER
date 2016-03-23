@@ -1,7 +1,6 @@
 // TODO: 지역 확인하기 (/regions HTTP GET)
 var express = require('express');
 var async = require('async');
-var bcrypt = require('bcrypt');
 var router = express.Router();
 var url = require('url');
 var queryString = require('querystring');
