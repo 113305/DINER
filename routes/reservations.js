@@ -326,7 +326,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
 
 // show 확인하기 (QR) (/reservations HTTP GET)
 router.get('/', isLoggedIn, function(req, res, next) {
-    var restaurantName = req.query.restaurantName;
+    var QRcodeUrl = req.query.QRcodeUrl;
     var customerId = req.user.customerId;
 
     function getConnection(callback) {
@@ -342,9 +342,9 @@ router.get('/', isLoggedIn, function(req, res, next) {
     function selectRestaurantId(connection, callback) {
         var select = "SELECT restaurant_id " +
             "         FROM restaurant " +
-            "         WHERE restaurant_name = ?";
+            "         WHERE QRcode_url = ?";
 
-        connection.query(select, [restaurantName], function(err, results) {
+        connection.query(select, [QRcodeUrl], function(err, results) {
             if (err) {
                 connection.release();
                 callback(err);
