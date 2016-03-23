@@ -7,12 +7,13 @@ var gcm = require('node-gcm');
 
 var router = express.Router();
 var logger = require('../config/loggerconfig');
+var sender = process.env.DINER_GCM_KEY;
 
 
 //안드로이드 푸시하기
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
-    var sender = new gcm.Sender('AIzaSyCTqs_tFwUjY-HUEj_tM01nH7Yfg4uBlVE');
+    var sender = new gcm.Sender(sender);
 
     //1. 커넥션
     function getConnection(callback) {
