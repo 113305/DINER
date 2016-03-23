@@ -328,6 +328,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
 router.get('/', isLoggedIn, function(req, res, next) {
     var QRcodeUrl = req.query.QRcodeUrl;
     var customerId = req.user.customerId;
+    logger.log('info','QRcodeUrl ' + QRcodeUrl);
 
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
@@ -351,6 +352,7 @@ router.get('/', isLoggedIn, function(req, res, next) {
             } else {
                 if (results.length === 0) {
                     var err = new Error('레스토랑 정보 조회에 실패하였습니다.');
+                    err.status = 401;
                     err.code = 'E0007a';
                     callback(err);
                 } else {
@@ -379,11 +381,13 @@ router.get('/', isLoggedIn, function(req, res, next) {
                 if (results.length === 0) {
                     var err = new Error('예약 정보 조회에 실패하였습니다.');
                     err.code = 'E0007b';
+                    logger.log('error', err);
                     callback(err);
                 } else {
                     var reservation = {
                         "id": results[0].reservation_id
                     };
+                    logger.log('info','reservationId ' + reservation);
                     callback(null, reservation);
                 }
             }
