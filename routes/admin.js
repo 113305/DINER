@@ -14,6 +14,7 @@ var sender = process.env.DINER_GCM_KEY;
 router.get('/:reservationId', function(req, res, next) {
     var reservationId = req.params.reservationId;
     var sender = new gcm.Sender(sender);
+    var title = 'DINER';
 
     //1. 커넥션
     function getConnection(callback) {
@@ -60,7 +61,8 @@ router.get('/:reservationId', function(req, res, next) {
         if (pushInfo.reservationState === 0) {
 
             var message = new gcm.Message();
-            message.addNotification("title", "DINER");
+            message.addData("title", title);
+
             //예약 시간 전 알림해주기
             async.eachSeries([pushInfo.before35, pushInfo.before35], function(beforeTime, cb) {
                 var info = '';
@@ -78,7 +80,7 @@ router.get('/:reservationId', function(req, res, next) {
                     pool.getConnection(function(err, connection) {
 
                         var content = pushInfo[time] + ' ' + pushInfo.restaurantName + ' 예약 시간 ' + info;
-                        message.addNotification("body", content);
+                        message.addData('message', content);
 
                         var select = "SELECT job_id " +
                             "FROM job " +
@@ -231,7 +233,7 @@ router.get('/:reservationId', function(req, res, next) {
 
                             function regenJob(cb) {
                                 var message = new gcm.Message();
-                                message.addNotification("title", "DINER");
+                                message.addData("title", title);
 
 
                                 //예약 시간 전 알림해주기
@@ -250,7 +252,7 @@ router.get('/:reservationId', function(req, res, next) {
                                         pool.getConnection(function(err, connection) {
 
                                             var content = pushInfo[time] + ' ' + pushInfo.restaurantName + ' 예약 시간 ' + info;
-                                            message.addNotification("body", content);
+                                            message.addData('message', content);
 
                                             var select = "SELECT job_id " +
                                                 "FROM job " +
