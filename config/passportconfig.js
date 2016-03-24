@@ -168,7 +168,7 @@ var passportconfig = function(passport){
                                 callback(null, customer);
                             } else {
                                 var update = "UPDATE customer " +
-                                             "SET	facebook_token = ? and registration_token = ? " +
+                                             "SET facebook_token = ? and registration_token = ? " +
                                              "WHERE facebook_id = ?";
                                 connection.query(update, [accessToken, registrationToken, profile.id], function(err, result) {
                                     connection.release();
