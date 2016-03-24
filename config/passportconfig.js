@@ -3,6 +3,7 @@ var FacebookTokenStrategy = require('passport-facebook-token');
 var bcrypt = require('bcrypt');
 var async = require('async');
 var authConfig = require('./authconfig');
+var logger = require('../config/loggerconfig');
 var hexkey = process.env.DINER_HEX_KEY;
 
 var passportconfig = function(passport){
@@ -121,6 +122,7 @@ var passportconfig = function(passport){
         "passReqToCallback": true
         }, function (req, accessToken, refreshToken, profile, done) {
             var registrationToken = req.body.registrationToken;
+            logger.log('info', 'registrationToken ', registrationToken);
 
             function getConnection(callback) {
                 pool.getConnection(function(err, connection) {
