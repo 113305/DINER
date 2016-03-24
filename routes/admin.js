@@ -68,7 +68,7 @@ router.get('/:reservationId', function(req, res, next) {
             message.addData("title", title);
 
             //예약 시간 전 알림해주기
-            async.eachSeries([pushInfo.before35, pushInfo.before35], function(beforeTime, cb) {
+            async.eachSeries([pushInfo.before60, pushInfo.before35], function(beforeTime, cb) {
                 var info = '';
                 var time = '';
                 if (beforeTime === pushInfo.before60) {
