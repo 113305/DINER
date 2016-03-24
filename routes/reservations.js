@@ -8,7 +8,6 @@ var util = require('util');
 
 var logger = require('../config/loggerconfig');
 
-
 // 예약하기 (/reservations HTTP POST) noshowpro계산해서 넣기
 
 function isLoggedIn(req, res, next) { // 로그인 성공 여부 확인
@@ -34,10 +33,6 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var etcRequest = req.body.etcRequest;
     var orderLists = req.body["orderLists[]"];
 
-    logger.log('info', 'orderLists' + orderLists);
-    logger.log('info', 'request' + util.inspect(req));
-
-
     var year = parseInt(req.body.year);
     var month = parseInt(req.body.month) - 1;
     var day = parseInt(req.body.day);
@@ -46,14 +41,14 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
 
     //원래 데이트타임
     var m = moment({"year": year, "month": month, "day": day,
-        "hour": hour, "minute": minute, "second": "00"}).tz('Asia/Seoul');
+        "hour": hour, "minute": minute, "second": "00"});
 
     var dateTime = m.format("YYYY-MM-DD HH:mm:00");
 
     //60분전 데이트타임
     var hour2 = hour -1;
     var m2 = moment({"year": year, "month": month, "day": day,
-        "hour": hour2, "minute": minute, "second": "00"}).tz('Asia/Seoul');
+        "hour": hour2, "minute": minute, "second": "00"});
 
     var before_60m = m2.format("YYYY-MM-DD HH:mm:00");
 
@@ -63,12 +58,12 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     //35분전
     if (minute >= 35) {  //예약 분이 35분보다 클때
         var m3 = moment({"year": year, "month": month, "day": day,
-            "hour": hour, "minute": minute2, "second": "00"}).tz('Asia/Seoul');
+            "hour": hour, "minute": minute2, "second": "00"});
 
         var before_35m = m3.format("YYYY-MM-DD HH:mm:00");
     } else {
         var m3 = moment({"year": year, "month": month, "day": day,
-            "hour": hour2, "minute": minute3, "second": "00"}).tz('Asia/Seoul');
+            "hour": hour2, "minute": minute3, "second": "00"});
 
         var before_35m = m3.format("YYYY-MM-DD HH:mm:00");
     }
