@@ -1,6 +1,7 @@
 var express = require('express');
 var bcrypt = require('bcrypt');
 var async = require('async');
+var util = require('util');
 var hexkey = process.env.DINER_HEX_KEY;
 
 var router = express.Router();
@@ -176,7 +177,8 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     var customer = req.user;  // 세션에저장된 user정보 id, name, phone, email, password, facebookEnail, facebookName
     var result = {};
 
-    logger.log('info', 'customer' + customer);
+
+    logger.log('info', 'customer' +  util.inspect(customer));
 
     function getConnection(callback) {
         pool.getConnection(function (err, connection) {
@@ -214,7 +216,7 @@ router.get('/me', isLoggedIn, function (req, res, next) {  // 내 정보 요청
     }
 
     function getReservation (connection, result, callback) {
-        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_class, dong_info, restaurant_name, date_time, adult_number, child_number, etc_request, score "+
+        var sql = "SELECT r.restaurant_id as restaurant_id, reservation_id, restaurant_class, dong_info, restaurant_name, date_format(CONVERT_TZ(date_time, 'UTC', 'Asia/Seoul'), '%Y-%m-%d %H:%i:%s') as date_time, adult_number, child_number, etc_request, score "+
                   "FROM reservation res join restaurant r on (r.restaurant_id = res.restaurant_id) "+
                   "WHERE customer_id = ? and reservation_state != 2";
 
