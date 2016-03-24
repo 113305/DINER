@@ -97,10 +97,10 @@ router.get('/:reservationId', function(req, res, next) {
                                     var insert = "INSERT INTO result_log (content, job_id) " +
                                         "VALUES (?, ?)";
 
-                                    var content = "GCM error";
+                                    var resultLog = "GCM error";
                                     logger.log('error', err);
 
-                                    connection.query(insert, [content, jobId], function(err, result) {
+                                    connection.query(insert, [resultLog, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
                                             logger.log('error', err);
@@ -115,16 +115,16 @@ router.get('/:reservationId', function(req, res, next) {
                                         "VALUES (?, ?)";
 
                                     if (result.results[0].message_id) {
-                                        var content = "push success - " + result.results[0].message_id;
+                                        var resultLog = "push success - " + result.results[0].message_id;
                                         logger.log('info', result.results[0].message_id);
                                         logger.log('info', jobName + ' push 처리 완료');
                                     } else {
-                                        var content = "push error - " + result.results[0].error;
+                                        var resultLog = "push error - " + result.results[0].error;
                                         logger.log('warn', result.results[0].error);
                                         logger.log('warn', jobName + ' push 처리 실패');
                                     }
 
-                                    connection.query(insert, [content, jobId], function(err, result) {
+                                    connection.query(insert, [resultLog, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
                                             logger.log('error', err);
@@ -150,12 +150,12 @@ router.get('/:reservationId', function(req, res, next) {
                         cb(err);
                     } else {
                         var jobId = result.insertId;
-                        var content = "generate job";
+                        var resultLog = "generate job";
 
                         var insert = "INSERT INTO result_log (content, job_id) " +
                                      "VALUES (?, ?)";
 
-                        connection.query(insert, [content, jobId], function(err, result) {
+                        connection.query(insert, [resultLog, jobId], function(err, result) {
                             if (err) {
                                 logger.log('error', err);
                                 logger.log('error', jobName + ' add result_log 처리 에러');
@@ -271,9 +271,9 @@ router.get('/:reservationId', function(req, res, next) {
                                                         var insert = "INSERT INTO result_log (content, job_id) " +
                                                             "VALUES (?, ?)";
 
-                                                        var content = "GCM error";
+                                                        var resultLog = "GCM error";
                                                         logger.log('error', err);
-                                                        connection.query(insert, [content, jobId], function(err, result) {
+                                                        connection.query(insert, [resultLog, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
                                                                 logger.log('error', err);
@@ -288,16 +288,16 @@ router.get('/:reservationId', function(req, res, next) {
                                                             "VALUES (?, ?)";
 
                                                         if (result.results[0].message_id) {
-                                                            var content = "push success - " + result.results[0].message_id;
+                                                            var resultLog = "push success - " + result.results[0].message_id;
                                                             logger.log('info', result.results[0].message_id);
                                                             logger.log('info', jobName + ' push 처리 완료');
                                                         } else {
-                                                            var content = "push error - " + result.results[0].error;
+                                                            var resultLog = "push error - " + result.results[0].error;
                                                             logger.log('warn', result.results[0].error);
                                                             logger.log('warn', jobName + ' push 처리 실패');
                                                         }
 
-                                                        connection.query(insert, [content, jobId], function(err, result) {
+                                                        connection.query(insert, [resultLog, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
                                                                 logger.log('error', err);
@@ -335,12 +335,12 @@ router.get('/:reservationId', function(req, res, next) {
                                                if (err) {
                                                    innercb(err);
                                                } else {
-                                                   var content = "regenerate job";
+                                                   var resultLog = "regenerate job";
 
                                                    var insert = "INSERT INTO result_log (content, job_id) " +
                                                        "VALUES (?, ?)";
 
-                                                   connection.query(insert, [content, jobId], function(err) {
+                                                   connection.query(insert, [resultLog, jobId], function(err) {
                                                        if (err) {
                                                            logger.log('error', err);
                                                            logger.log('error', jobName + ' add result_log 처리 에러');
