@@ -29,9 +29,9 @@ router.get('/:reservationId', function(req, res, next) {
     //2. 예약 상태 확인하기
     function selectReservationState(connection, callback) {
         var select = "SELECT registration_token, restaurant_name, " +
-                     "       date_format(CONVERT_TZ(date_time, 'UTC', 'Asia/Seoul'), '%Y-%m-%d %H:%i:%s') as date_time, " +
-                     "       date_format(CONVERT_TZ(before_35m, 'UTC', 'Asia/Seoul'), '%Y-%m-%d %H:%i:%s') as before_35m, " +
-                     "       date_format(CONVERT_TZ(before_60m, 'UTC', 'Asia/Seoul'), '%Y-%m-%d %H:%i:%s') as before_60m, " +
+                     "       date_time, " +
+                     "       before_35m, " +
+                     "       before_60m, " +
                      "       date_format(CONVERT_TZ(before_35m, 'UTC', 'Asia/Seoul'), '%Y년 %m월 %d일  %h:%i%p') as B35, " +
                      "       date_format(CONVERT_TZ(before_60m, 'UTC', 'Asia/Seoul'), '%Y년 %m월 %d일  %h:%i%p') as B60, reservation_state " +
                      "FROM reservation JOIN customer " +
