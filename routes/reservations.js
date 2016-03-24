@@ -55,6 +55,7 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
     var minute2 = minute - 35;
     var minute3 = 60 - (35 - minute);
 
+
     //35분전
     if (minute >= 35) {  //예약 분이 35분보다 클때
         var m3 = moment({"year": year, "month": month, "day": day,
