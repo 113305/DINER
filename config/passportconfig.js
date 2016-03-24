@@ -162,15 +162,15 @@ var passportconfig = function(passport){
                                 }
                             });
                         } else {
-                            //if (accessToken === results[0].facebook_token && registrationToken === results[0].registration_token) {
-                            //    connection.release();
-                            //    var customer = {
-                            //        "id": results[0].customer_id
-                            //    };
-                            //    callback(null, customer);
-                            //} else {
+                            if (accessToken === results[0].facebook_token && registrationToken === results[0].registration_token) {
+                                connection.release();
+                                var customer = {
+                                    "id": results[0].customer_id
+                                };
+                                callback(null, customer);
+                            } else {
                                 var update = "UPDATE customer " +
-                                             "SET facebook_token = ? and registration_token = ? " +
+                                             "SET facebook_token = ?, registration_token = ? " +
                                              "WHERE facebook_id = ?";
                                 connection.query(update, [accessToken, registrationToken, profile.id], function(err, result) {
                                     connection.release();
@@ -183,7 +183,7 @@ var passportconfig = function(passport){
                                         callback(null, customer);
                                     }
                                 });
-                            //}
+                            }
                         }
                     }
                 });
