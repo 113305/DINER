@@ -65,7 +65,7 @@ router.get('/:reservationId', function(req, res, next) {
         if (pushInfo.reservationState === 0) {
 
             var message = new gcm.Message();
-            message.addData("title", title);
+            message.addData('title', title);
 
             //예약 시간 전 알림해주기
             async.eachSeries([pushInfo.before60, pushInfo.before35], function(beforeTime, cb) {
@@ -237,7 +237,7 @@ router.get('/:reservationId', function(req, res, next) {
 
                             function regenJob(cb) {
                                 var message = new gcm.Message();
-                                message.addData("title", title);
+                                message.addData('title', title);
 
 
                                 //예약 시간 전 알림해주기
