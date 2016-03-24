@@ -105,9 +105,19 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                 function updateReservationTable ( cb1) {
                     if (pReservationId === 0) {   // reservation_state = 0(디폴트)
                         var sql = "INSERT INTO reservation(customer_id, restaurant_id, no_show_pro, date_time, before_60m, before_35m, adult_number, child_number, etc_request, reservation_state) " +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            "VALUES (" +
+                            connection.escape(customer.customerId) + ", " +
+                            connection.escape(restaurantId) + ", " +
+                            connection.escape(noShowPro) + ", " +
+                            "date_format(CONVERT_TZ(" + connection.escape(dateTime) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            "date_format(CONVERT_TZ(" + connection.escape(before_60m) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            "date_format(CONVERT_TZ(" + connection.escape(before_35m) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            connection.escape(adultNumber) + ", " +
+                            connection.escape(childNumber) + ", " +
+                            connection.escape(etcRequest) + ", " +
+                            connection.escape(reservationState) + ")";
 
-                        connection.query(sql, [customer.customerId, restaurantId, noShowPro, dateTime, before_60m, before_35m, adultNumber, childNumber, etcRequest, reservationState], function (err, result) {
+                        connection.query(sql, function (err, result) {
                             if (err) {
                                 connection.rollback();
                                 connection.release();
@@ -120,11 +130,16 @@ router.post('/:restaurantId/reserve/:pReservationId', isLoggedIn, function(req, 
                     } else {
                         // 취소일땐                        상태만 2로 바꿔줌
                         var sql = "UPDATE reservation " +
-                            "SET date_time = ?, before_60m = ?, before_35m = ?, adult_number= ?, child_number =?, etc_request =?, " +
-                            "reservation_state = ? " +
-                            "WHERE reservation_id = ?";
+                            "SET date_time = date_format(CONVERT_TZ(" + connection.escape(dateTime) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            "before_60m = date_format(CONVERT_TZ(" + connection.escape(before_60m) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            "before_35m = date_format(CONVERT_TZ(" + connection.escape(before_35m) + ", 'Asia/Seoul', 'UTC'), '%Y-%m-%d %H:%i:%s'), " +
+                            "adult_number = " + connection.escape(adultNumber) + ", " +
+                            "child_number = " + connection.escape(childNumber) + ", " +
+                            "etc_request = " + connection.escape(etcRequest) + ", " +
+                            "reservation_state = " + connection.escape(reservationState) +
+                            "WHERE reservation_id = " + connection.escape(pReservationId);
 
-                        connection.query(sql, [dateTime, before_60m, before_35m, adultNumber, childNumber, etcRequest, reservationState, pReservationId], function (err, result) {
+                        connection.query(sql, function (err, result) {
                             if (err) {
                                 connection.rollback();
                                 connection.release();
