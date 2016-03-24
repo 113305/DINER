@@ -98,6 +98,8 @@ router.get('/:reservationId', function(req, res, next) {
                                         "VALUES (?, ?)";
 
                                     var content = "GCM error";
+                                    logger.log('error', err);
+
                                     connection.query(insert, [content, jobId], function(err, result) {
                                         if (err) {
                                             connection.release();
@@ -270,7 +272,7 @@ router.get('/:reservationId', function(req, res, next) {
                                                             "VALUES (?, ?)";
 
                                                         var content = "GCM error";
-
+                                                        logger.log('error', err);
                                                         connection.query(insert, [content, jobId], function(err, result) {
                                                             if (err) {
                                                                 connection.release();
